@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.14)
+project(myapp CXX)
+set(CMAKE_CXX_STANDARD 17)
+include(FetchContent)
+FetchContent_Declare( nlohmann_json GIT_REPOSITORY https://github.com/nlohmann/json.git GIT_TAG v3.11.3 )
+FetchContent_MakeAvailable(nlohmann_json)
+add_executable(myapp main.cpp)
+target_link_libraries(myapp PRIVATE nlohmann_json::nlohmann_json)

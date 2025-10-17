@@ -1,0 +1,248 @@
+NetworkSecurityAI/
+├── 📁 src/                          # Mã nguồn chính
+│   ├── 📁 core/                     # Lõi hệ thống
+│   │   ├── 📁 layer1/               # Tầng 1: IPS truyền thống
+│   │   │   ├── packet_ingress.cpp
+│   │   │   ├── xdp_filter.cpp       # eBPF/XDP pre-filtering
+│   │   │   ├── dpdk_dispatcher.cpp  # DPDK load balancer
+│   │   │   ├── flow_assembly.cpp    # Flow reconstruction
+│   │   │   ├── protocol_decoder.cpp # Deep packet inspection
+│   │   │   ├── threat_detection.cpp # Signature-based detection
+│   │   │   ├── action_engine.cpp    # Action handler
+│   │   │   └── packet_egress.cpp
+│   │   │
+│   │   ├── 📁 layer2/               # Tầng 2: AI/ML Analysis
+│   │   │   ├── feature_extractor.cpp
+│   │   │   ├── message_queue.cpp    # Data bus
+│   │   │   ├── feedback_loop.cpp
+│   │   │   │
+│   │   │   ├── 📁 ai_engine/        # AI core modules
+│   │   │   │   ├── anomaly_detector.cpp
+│   │   │   │   ├── autoencoder.cpp
+│   │   │   │   ├── isolation_forest.cpp
+│   │   │   │   ├── clustering_engine.cpp
+│   │   │   │   └── neural_network.cpp
+│   │   │   │
+│   │   │   └── 📁 model_management/
+│   │   │       ├── model_trainer.cpp
+│   │   │       ├── model_validator.cpp
+│   │   │       └── model_updater.cpp
+│   │   │
+│   │   ├── 📁 common/               # Shared components
+│   │   │   ├── packet_parser.cpp
+│   │   │   ├── flow_manager.cpp
+│   │   │   ├── logger.cpp
+│   │   │   ├── config_manager.cpp
+│   │   │   ├── utils.cpp
+│   │   │   └── network_utils.cpp
+│   │   │
+│   │   └── 📁 storage/              # Data persistence
+│   │       ├── database_manager.cpp
+│   │       ├── rule_manager.cpp
+│   │       ├── threat_db.cpp
+│   │       └── time_series_db.cpp
+│   │
+│   ├── 📁 analytics/                # 📊 Advanced Analytics
+│   │   ├── 📁 forecasting/          # Predictive analysis
+│   │   │   ├── time_series_predictor.cpp
+│   │   │   ├── trend_analyzer.cpp
+│   │   │   └── attack_predictor.cpp
+│   │   │
+│   │   ├── 📁 risk_assessment/      # Risk evaluation
+│   │   │   ├── risk_calculator.cpp
+│   │   │   ├── vulnerability_scorer.cpp
+│   │   │   └── threat_prioritizer.cpp
+│   │   │
+│   │   ├── 📁 pattern_analysis/     # Pattern recognition
+│   │   │   ├── correlation_engine.cpp
+│   │   │   ├── behavior_profiler.cpp
+│   │   │   └── outlier_detector.cpp
+│   │   │
+│   │   └── 📁 reporting/            # Automated reporting
+│   │       ├── report_generator.cpp
+│   │       ├── trend_reporter.cpp
+│   │       └── insight_engine.cpp
+│   │
+│   ├── 📁 interfaces/               # User interfaces
+│   │   ├── 📁 cli/                  # Command line interface
+│   │   │   ├── cli_main.cpp
+│   │   │   ├── cli_commands.cpp
+│   │   │   └── cli_parser.cpp
+│   │   │
+│   │   └── 📁 gui/                  # 🎨 Graphical dashboard
+│   │       ├── main_window.cpp
+│   │       ├── dashboard_controller.cpp
+│   │       ├── settings_manager.cpp
+│   │       │
+│   │       ├── 📁 widgets/          # Dashboard widgets
+│   │       │   ├── threat_heatmap_widget.cpp
+│   │       │   ├── traffic_flow_widget.cpp
+│   │       │   ├── ai_confidence_meter.cpp
+│   │       │   ├── forecast_chart_widget.cpp
+│   │       │   ├── risk_gauge_widget.cpp
+│   │       │   ├── real_time_chart.cpp
+│   │       │   ├── network_topology_widget.cpp
+│   │       │   ├── alert_panel.cpp
+│   │       │   └── system_status_widget.cpp
+│   │       │
+│   │       ├── 📁 charts/           # Advanced charting
+│   │       │   ├── sankey_diagram.cpp
+│   │       │   ├── distribution_plot.cpp
+│   │       │   ├── multi_series_chart.cpp
+│   │       │   ├── 3d_network_view.cpp
+│   │       │   └── chart_renderer.cpp
+│   │       │
+│   │       ├── 📁 themes/           # Visual themes
+│   │       │   ├── dark_theme.cpp
+│   │       │   ├── cyberpunk_theme.cpp
+│   │       │   ├── light_theme.cpp
+│   │       │   └── theme_manager.cpp
+│   │       │
+│   │       └── 📁 resources/        # GUI resources
+│   │           ├── 📁 icons/        # Security & network icons
+│   │           ├── 📁 stylesheets/  # QSS styling
+│   │           ├── 📁 fonts/        # Custom fonts
+│   │           └── 📁 images/       # Background images
+│   │
+│   └── main.cpp                     # Application entry point
+│
+├── 📁 data/                         # Data files
+│   ├── 📁 blacklists/               # Security blacklists
+│   │   ├── ip_blacklist.txt
+│   │   ├── domain_blacklist.txt
+│   │   └── malware_hashes.txt
+│   │
+│   ├── 📁 rules/                    # Detection rules
+│   │   ├── ips_rules.conf
+│   │   ├── ml_thresholds.conf
+│   │   ├── custom_rules.conf
+│   │   └── protocol_rules.conf
+│   │
+│   ├── 📁 models/                   # AI/ML models
+│   │   ├── autoencoder_model.bin
+│   │   ├── isolation_forest_model.bin
+│   │   ├── time_series_model.bin
+│   │   ├── clustering_model.bin
+│   │   └── neural_network_model.bin
+│   │
+│   ├── 📁 pcap/                     # Network captures
+│   │   ├── 📁 samples/              # Sample traffic
+│   │   ├── 📁 training_data/        # Labeled training data
+│   │   └── 📁 test_cases/           # Test scenarios
+│   │
+│   ├── 📁 databases/                # Database files
+│   │   ├── threats.db               # Main threat database
+│   │   ├── flows.db                 # Flow information
+│   │   └── analytics.db             # Analytics data
+│   │
+│   └── 📁 signatures/               # Threat signatures
+│       ├── malware_signatures.sig
+│       ├── network_signatures.sig
+│       └── behavioral_patterns.sig
+│
+├── 📁 config/                       # Configuration files
+│   ├── main_config.yaml
+│   ├── layer1_config.yaml
+│   ├── ai_config.yaml
+│   ├── analytics_config.yaml
+│   ├── dashboard_config.yaml
+│   ├── network_config.yaml
+│   └── logging_config.yaml
+│
+├── 📁 logs/                         # Log files
+│   ├── 📁 system/                   # System logs
+│   ├── 📁 security/                 # Security events
+│   ├── 📁 performance/              # Performance metrics
+│   └── 📁 debug/                    # Debug information
+│
+├── 📁 scripts/                      # Utility scripts
+│   ├── install.sh
+│   ├── setup_environment.sh
+│   ├── backup_system.sh
+│   ├── train_models.py
+│   ├── update_rules.py
+│   ├── generate_reports.py
+│   ├── performance_test.py
+│   └── data_migration.py
+│
+├── 📁 tests/                        # Test suites
+│   ├── 📁 unit/                     # Unit tests
+│   │   ├── test_layer1.cpp
+│   │   ├── test_layer2.cpp
+│   │   ├── test_analytics.cpp
+│   │   └── test_gui.cpp
+│   │
+│   ├── 📁 integration/              # Integration tests
+│   │   ├── test_full_pipeline.cpp
+│   │   └── test_performance.cpp
+│   │
+│   └── 📁 data/                     # Test data
+│       ├── test_pcaps/
+│       └── expected_results/
+│
+├── 📁 docs/                         # Documentation
+│   ├── README.md
+│   ├── ARCHITECTURE.md
+│   ├── INSTALLATION.md
+│   ├── USER_GUIDE.md
+│   ├── DEVELOPER_GUIDE.md
+│   ├── API_REFERENCE.md
+│   ├── DASHBOARD_GUIDE.md
+│   └── TROUBLESHOOTING.md
+│
+├── 📁 external/                     # External libraries
+│   ├── 📁 networking/               # Network libraries
+│   │   ├── dpdk/
+│   │   ├── ebpf/
+│   │   └── pcap/
+│   │
+│   ├── 📁 ai_ml/                    # AI/ML libraries
+│   │   ├── pytorch/
+│   │   ├── tensorflow/
+│   │   ├── scikit-learn/
+│   │   └── opencv/
+│   │
+│   ├── 📁 gui/                      # GUI libraries
+│   │   ├── qt/
+│   │   ├── plotly/
+│   │   └── charts/
+│   │
+│   ├── 📁 database/                 # Database libraries
+│   │   ├── sqlite/
+│   │   ├── redis/
+│   │   └── influxdb/
+│   │
+│   └── 📁 utilities/                # Utility libraries
+│       ├── json/
+│       ├── yaml/
+│       └── compression/
+│
+├── 📁 build/                        # Build artifacts
+│   ├── 📁 debug/
+│   ├── 📁 release/
+│   └── 📁 packages/
+│
+├── 📁 deployment/                   # Deployment files
+│   ├── 📁 docker/
+│   │   ├── Dockerfile
+│   │   └── docker-compose.yml
+│   │
+│   ├── 📁 kubernetes/
+│   │   ├── deployment.yaml
+│   │   └── service.yaml
+│   │
+│   └── 📁 systemd/
+│       └── network-security-ai.service
+│
+├── CMakeLists.txt                   # Build configuration
+├── requirements.txt                 # Python dependencies
+├── package.json                     # Node.js dependencies (if needed)
+├── Makefile                         # Alternative build system
+├── .gitignore                       # Git ignore rules
+├── .clang-format                    # Code formatting
+├── .github/                         # GitHub workflows
+│   └── workflows/
+│       ├── ci.yml
+│       └── release.yml
+├── LICENSE                          # License file
+└── VERSION                          # Version information

@@ -1,0 +1,11 @@
+# NetworkSecurityAI - IP Blacklist
+# Format: IP_ADDRESS[/PREFIX] [COMMENT]
+# Updated: 2025-10-17
+
+# Known malicious IPs
+192.168.100.50          # Internal scanner detected
+203.0.113.0/24          # Botnet C&C network
+198.51.100.10           # DDoS source
+
+# Temporary blocks (manual review needed)
+192.0.2.100             # Suspicious activity - 2025-10-17
