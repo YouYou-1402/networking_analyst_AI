@@ -92,6 +92,13 @@ namespace NetworkSecurity
         std::vector<std::string> Utils::split(const std::string &str, char delimiter)
         {
             std::vector<std::string> tokens;
+            
+            // Xử lý trường hợp chuỗi rỗng
+            if (str.empty()) {
+                tokens.push_back("");
+                return tokens;
+            }
+            
             std::stringstream ss(str);
             std::string token;
 
@@ -99,12 +106,31 @@ namespace NetworkSecurity
             {
                 tokens.push_back(token);
             }
+            
+            // Xử lý trường hợp kết thúc bằng delimiter
+            if (!str.empty() && str.back() == delimiter) {
+                tokens.push_back("");
+            }
+            
             return tokens;
         }
 
         std::vector<std::string> Utils::split(const std::string &str, const std::string &delimiter)
         {
             std::vector<std::string> tokens;
+            
+            // Xử lý trường hợp chuỗi rỗng
+            if (str.empty()) {
+                tokens.push_back("");
+                return tokens;
+            }
+            
+            // Xử lý trường hợp delimiter rỗng
+            if (delimiter.empty()) {
+                tokens.push_back(str);
+                return tokens;
+            }
+            
             size_t start = 0;
             size_t end = str.find(delimiter);
 
@@ -115,6 +141,7 @@ namespace NetworkSecurity
                 end = str.find(delimiter, start);
             }
             tokens.push_back(str.substr(start));
+            
             return tokens;
         }
 
@@ -405,8 +432,16 @@ namespace NetworkSecurity
             struct stat buffer;
             if (stat(filepath.c_str(), &buffer) != 0)
                 return 0;
-            return static_cast<uint64_t>(buffer.st_mtime) * 1000; // Convert to milliseconds
+            
+            // Sử dụng st_mtim để có độ chính xác nanosecond
+            #ifdef __linux__
+            return static_cast<uint64_t>(buffer.st_mtim.tv_sec) * 1000 + 
+                static_cast<uint64_t>(buffer.st_mtim.tv_nsec) / 1000000;
+            #else
+            return static_cast<uint64_t>(buffer.st_mtime) * 1000;
+            #endif
         }
+
 
         std::string Utils::getFileName(const std::string &filepath)
         {
@@ -427,11 +462,21 @@ namespace NetworkSecurity
         std::string Utils::getFileExtension(const std::string &filepath)
         {
             std::string filename = getFileName(filepath);
+            
+            // File bắt đầu bằng dấu chấm (hidden file) không có extension
+            if (filename.empty() || filename[0] == '.') {
+                size_t pos = filename.find('.', 1); // Tìm dấu chấm thứ 2
+                if (pos == std::string::npos)
+                    return "";
+                return filename.substr(pos);
+            }
+            
             size_t pos = filename.find_last_of('.');
             if (pos == std::string::npos)
                 return "";
             return filename.substr(pos);
         }
+
 
         // ==================== Memory utilities ====================
         std::string Utils::formatBytes(size_t bytes)
@@ -468,15 +513,17 @@ namespace NetworkSecurity
                     if (i + j < length)
                     {
                         os << std::hex << std::setw(2) << std::setfill('0')
-                           << static_cast<int>(bytes[i + j]) << " ";
+                        << static_cast<int>(bytes[i + j]);
+                        if (j < bytes_per_line - 1) os << " "; // Thêm space giữa các bytes
                     }
                     else
                     {
-                        os << "   ";
+                        os << "  ";
+                        if (j < bytes_per_line - 1) os << " ";
                     }
                 }
 
-                os << " ";
+                os << "  "; // 2 spaces trước ASCII
 
                 // Print ASCII representation
                 for (size_t j = 0; j < bytes_per_line && i + j < length; ++j)
@@ -488,6 +535,7 @@ namespace NetworkSecurity
                 os << std::endl;
             }
         }
+
 
         std::string Utils::bytesToHex(const void *data, size_t length)
         {

@@ -1,29 +1,25 @@
 // src/core/layer1/xdp_filter.hpp
-#ifndef XDP_FILTER_HPP
-#define XDP_FILTER_HPP
+#ifndef NETWORK_SECURITY_XDP_FILTER_HPP
+#define NETWORK_SECURITY_XDP_FILTER_HPP
 
-#include "../../common/utils.hpp"
-#include "../../common/logger.hpp"
-#include "../../common/config_manager.hpp"
-#include "../../common/network_utils.hpp"
 #include <string>
 #include <vector>
-#include <memory>
-#include <atomic>
-#include <mutex>
-#include <unordered_map>
 #include <unordered_set>
-#include <fstream>
-#include <linux/bpf.h>
-#include <bpf/libbpf.h>
-#include <bpf/bpf.h>
-#include <net/if.h>
-#include <linux/if_link.h>
-#include <linux/if_ether.h>
-#include <linux/ip.h>
-#include <linux/ipv6.h>
-#include <linux/tcp.h>
-#include <linux/udp.h>
+#include <unordered_map>
+#include <memory>
+#include <mutex>
+#include <atomic>
+#include <thread>
+#include <cstring>
+
+#include "../../common/logger.hpp"
+#include "../../common/config_manager.hpp"
+
+// Forward declarations to avoid header conflicts
+struct bpf_object;
+struct bpf_program;
+struct bpf_link;
+struct bpf_map;
 
 namespace NetworkSecurity
 {
@@ -31,452 +27,201 @@ namespace NetworkSecurity
     {
         namespace Layer1
         {
-            /**
-             * @brief XDP Action codes
-             */
-            enum class XDPAction : uint32_t
+            // ==================== XDP Action Types ====================
+            enum class XDPAction
             {
-                ABORTED = XDP_ABORTED,  // Error, drop packet
-                DROP = XDP_DROP,        // Drop packet
-                PASS = XDP_PASS,        // Pass to normal network stack
-                TX = XDP_TX,            // Transmit packet
-                REDIRECT = XDP_REDIRECT // Redirect to another interface
+                PASS = 0,    // XDP_PASS - Cho phép gói tin đi qua
+                DROP = 1,    // XDP_DROP - Loại bỏ gói tin
+                ABORTED = 2, // XDP_ABORTED - Lỗi xử lý
+                TX = 3,      // XDP_TX - Gửi lại gói tin
+                REDIRECT = 4 // XDP_REDIRECT - Chuyển hướng
             };
 
-            /**
-             * @brief XDP Attach mode
-             */
-            enum class XDPMode : uint32_t
+            // ==================== XDP Statistics ====================
+            struct XDPStats
             {
-                SKB = XDP_FLAGS_SKB_MODE,        // Generic mode (slowest, compatible)
-                DRV = XDP_FLAGS_DRV_MODE,        // Driver mode (fast)
-                HW = XDP_FLAGS_HW_MODE,          // Hardware offload (fastest)
-                AUTO = XDP_FLAGS_UPDATE_IF_NOEXIST
+                uint64_t total_packets;
+                uint64_t passed_packets;
+                uint64_t dropped_packets;
+                uint64_t blacklist_hits;
+                uint64_t rate_limit_hits;
+                uint64_t malformed_packets;
+                uint64_t processing_errors;
+                
+                double drop_rate;
+                double blacklist_hit_rate;
+                
+                XDPStats()
+                    : total_packets(0), passed_packets(0), dropped_packets(0),
+                      blacklist_hits(0), rate_limit_hits(0), malformed_packets(0),
+                      processing_errors(0), drop_rate(0.0), blacklist_hit_rate(0.0)
+                {
+                }
             };
 
-            /**
-             * @brief Blacklist entry - simple structure
-             */
+            // ==================== Blacklist Entry ====================
             struct BlacklistEntry
             {
-                uint32_t ip_addr;           // Network byte order
-                uint32_t netmask;           // Network byte order (for CIDR)
-                std::string ip_string;      // Human readable
-                std::string comment;        // Comment from file
-                uint64_t added_time;        // When added
-
-                BlacklistEntry()
-                    : ip_addr(0), netmask(0xFFFFFFFF), added_time(0) {}
-
-                BlacklistEntry(uint32_t ip, uint32_t mask, const std::string& ip_str, const std::string& cmt)
-                    : ip_addr(ip), netmask(mask), ip_string(ip_str), comment(cmt),
-                      added_time(Common::Utils::getCurrentTimestampMs()) {}
-
-                // Check if test_ip matches this entry
-                bool matches(uint32_t test_ip) const
-                {
-                    return (test_ip & netmask) == (ip_addr & netmask);
-                }
-            };
-
-            /**
-             * @brief Rate limit entry (per IP)
-             */
-            struct RateLimitEntry
-            {
-                uint32_t ip_addr;
-                uint64_t packet_count;
-                uint64_t byte_count;
-                uint64_t window_start;      // Timestamp của window hiện tại
-                uint64_t last_packet_time;
-
-                RateLimitEntry()
-                    : ip_addr(0), packet_count(0), byte_count(0),
-                      window_start(0), last_packet_time(0) {}
-            };
-
-            /**
-             * @brief Rate limit configuration
-             */
-            struct RateLimitConfig
-            {
-                uint64_t max_packets_per_sec;
-                uint64_t max_bytes_per_sec;
-                uint64_t window_size_ms;        // Time window size (default 1000ms)
-
-                RateLimitConfig()
-                    : max_packets_per_sec(10000),
-                      max_bytes_per_sec(100 * 1024 * 1024), // 100 MB/s
-                      window_size_ms(1000) {}
-            };
-
-            /**
-             * @brief XDP program statistics
-             */
-            struct XDPStatistics
-            {
-                std::atomic<uint64_t> total_packets{0};
-                std::atomic<uint64_t> passed_packets{0};
-                std::atomic<uint64_t> dropped_packets{0};
-                std::atomic<uint64_t> malformed_packets{0};
-                std::atomic<uint64_t> blacklisted_packets{0};
-                std::atomic<uint64_t> rate_limited_packets{0};
-                std::atomic<uint64_t> total_bytes{0};
-                std::atomic<uint64_t> dropped_bytes{0};
+                uint32_t ip_address;     // Network byte order
+                uint64_t timestamp;      // Thời gian thêm vào blacklist
+                std::string reason;      // Lý do blacklist
+                bool is_permanent;       // Blacklist vĩnh viễn hay tạm thời
                 
-                uint64_t start_time;
-                uint64_t last_update_time;
-
-                XDPStatistics() 
-                    : start_time(Common::Utils::getCurrentTimestampMs()),
-                      last_update_time(start_time) {}
-
-                void reset()
+                BlacklistEntry()
+                    : ip_address(0), timestamp(0), is_permanent(false)
                 {
-                    total_packets = 0;
-                    passed_packets = 0;
-                    dropped_packets = 0;
-                    malformed_packets = 0;
-                    blacklisted_packets = 0;
-                    rate_limited_packets = 0;
-                    total_bytes = 0;
-                    dropped_bytes = 0;
-                    start_time = Common::Utils::getCurrentTimestampMs();
-                    last_update_time = start_time;
-                }
-
-                double getDropRate() const
-                {
-                    uint64_t total = total_packets.load();
-                    if (total == 0) return 0.0;
-                    return (double)dropped_packets.load() / total * 100.0;
-                }
-
-                double getThroughputMbps() const
-                {
-                    uint64_t duration_ms = Common::Utils::getCurrentTimestampMs() - start_time;
-                    if (duration_ms == 0) return 0.0;
-                    return (double)total_bytes.load() * 8 / duration_ms / 1000.0;
-                }
-
-                uint64_t getPacketsPerSecond() const
-                {
-                    uint64_t duration_ms = Common::Utils::getCurrentTimestampMs() - start_time;
-                    if (duration_ms == 0) return 0;
-                    return total_packets.load() * 1000 / duration_ms;
                 }
             };
 
-            /**
-             * @brief XDP Filter Manager - Simplified Version
-             */
+            // ==================== XDP Filter Configuration ====================
+            struct XDPFilterConfig
+            {
+                std::string interface_name;           // Network interface (eth0, ens33, etc.)
+                std::string xdp_program_path;         // Path to compiled eBPF object file
+                bool enable_ip_blacklist;
+                bool enable_domain_blacklist;
+                bool enable_hash_blacklist;
+                bool enable_rate_limiting;
+                uint32_t rate_limit_pps;              // Packets per second limit
+                uint32_t blacklist_sync_interval_sec; // Sync interval in seconds
+                uint32_t xdp_flags;                   // XDP attach flags
+                std::string ip_blacklist_file;
+                std::string domain_blacklist_file;
+                std::string hash_blacklist_file;
+                
+                XDPFilterConfig()
+                    : interface_name("eth0"),
+                      xdp_program_path("xdp_filter.bpf.o"),
+                      enable_ip_blacklist(true),
+                      enable_domain_blacklist(true),
+                      enable_hash_blacklist(true),
+                      enable_rate_limiting(true),
+                      rate_limit_pps(100000),
+                      blacklist_sync_interval_sec(60),
+                      xdp_flags(0x04 | 0x02), // XDP_FLAGS_UPDATE_IF_NOEXIST | XDP_FLAGS_SKB_MODE
+                      ip_blacklist_file("data/blacklists/ip_blacklist.txt"),
+                      domain_blacklist_file("data/blacklists/domain_blacklist.txt"),
+                      hash_blacklist_file("data/blacklists/malware_hashes.txt")
+                {
+                }
+            };
+
+            // ==================== XDP Filter Class ====================
             class XDPFilter
             {
             public:
                 XDPFilter();
                 ~XDPFilter();
 
-                // Prevent copy
-                XDPFilter(const XDPFilter&) = delete;
-                XDPFilter& operator=(const XDPFilter&) = delete;
-
                 // ==================== Initialization ====================
-                /**
-                 * @brief Initialize XDP filter
-                 * @param interface Network interface name (e.g., "eth0")
-                 * @param bpf_program_path Path to compiled BPF object file
-                 * @param blacklist_file Path to blacklist.txt file
-                 * @param mode XDP attach mode
-                 * @return true if successful
-                 */
-                bool initialize(const std::string& interface,
-                              const std::string& bpf_program_path,
-                              const std::string& blacklist_file,
-                              XDPMode mode = XDPMode::DRV);
-
-                /**
-                 * @brief Attach XDP program to interface
-                 */
-                bool attach();
-
-                /**
-                 * @brief Detach XDP program from interface
-                 */
-                bool detach();
-
-                /**
-                 * @brief Check if XDP is attached
-                 */
-                bool isAttached() const { return is_attached_; }
-
-                /**
-                 * @brief Reload BPF program (re-attach)
-                 */
-                bool reload();
+                bool initialize(const XDPFilterConfig &config);
+                bool loadXDPProgram();
+                bool attachToInterface();
+                bool detachFromInterface();
+                void shutdown();
 
                 // ==================== Blacklist Management ====================
-                /**
-                 * @brief Load blacklist from file
-                 * Format: IP_ADDRESS[/PREFIX] [# COMMENT]
-                 * Example:
-                 *   192.168.1.100
-                 *   10.0.0.0/8 # Private network
-                 *   203.0.113.50 # Malicious IP
-                 */
-                bool loadBlacklist(const std::string& file_path);
+                bool loadIPBlacklist(const std::string &file_path);
+                bool loadDomainBlacklist(const std::string &file_path);
+                bool loadHashBlacklist(const std::string &file_path);
+                
+                bool addIPToBlacklist(uint32_t ip_address, const std::string &reason, bool permanent = false);
+                bool removeIPFromBlacklist(uint32_t ip_address);
+                bool isIPBlacklisted(uint32_t ip_address) const;
+                
+                bool addDomainToBlacklist(const std::string &domain, const std::string &reason);
+                bool removeDomainFromBlacklist(const std::string &domain);
+                bool isDomainBlacklisted(const std::string &domain) const;
+                
+                bool addHashToBlacklist(const std::string &hash, const std::string &reason);
+                bool removeHashFromBlacklist(const std::string &hash);
+                bool isHashBlacklisted(const std::string &hash) const;
 
-                /**
-                 * @brief Reload blacklist from current file
-                 */
-                bool reloadBlacklist();
-
-                /**
-                 * @brief Add IP to blacklist (runtime)
-                 * @param ip_addr IP address (string format)
-                 * @param prefix_len CIDR prefix length (default 32 = single IP)
-                 * @param comment Optional comment
-                 */
-                bool addBlacklistIP(const std::string& ip_addr, 
-                                   int prefix_len = 32,
-                                   const std::string& comment = "");
-
-                /**
-                 * @brief Remove IP from blacklist (runtime)
-                 */
-                bool removeBlacklistIP(const std::string& ip_addr);
-
-                /**
-                 * @brief Check if IP is blacklisted
-                 */
-                bool isBlacklisted(const std::string& ip_addr) const;
-
-                /**
-                 * @brief Check if IP (uint32_t) is blacklisted
-                 */
-                bool isBlacklisted(uint32_t ip_addr) const;
-
-                /**
-                 * @brief Clear all blacklist entries
-                 */
-                void clearBlacklist();
-
-                /**
-                 * @brief Get all blacklist entries
-                 */
-                std::vector<BlacklistEntry> getBlacklistEntries() const;
-
-                /**
-                 * @brief Get blacklist count
-                 */
-                size_t getBlacklistCount() const;
-
-                /**
-                 * @brief Save current blacklist to file
-                 */
-                bool saveBlacklist(const std::string& file_path) const;
-
-                // ==================== Rate Limiting ====================
-                /**
-                 * @brief Enable/disable rate limiting
-                 */
-                void setRateLimitEnabled(bool enabled);
-
-                /**
-                 * @brief Check if rate limiting is enabled
-                 */
-                bool isRateLimitEnabled() const { return rate_limit_enabled_; }
-
-                /**
-                 * @brief Set global rate limit configuration
-                 */
-                void setRateLimitConfig(const RateLimitConfig& config);
-
-                /**
-                 * @brief Get current rate limit configuration
-                 */
-                RateLimitConfig getRateLimitConfig() const;
-
-                /**
-                 * @brief Clear all rate limit entries
-                 */
-                void clearRateLimits();
-
-                // ==================== Malformed Packet Detection ====================
-                /**
-                 * @brief Enable/disable malformed packet detection
-                 */
-                void setMalformedDetectionEnabled(bool enabled);
-
-                /**
-                 * @brief Check if malformed detection is enabled
-                 */
-                bool isMalformedDetectionEnabled() const { return malformed_detection_enabled_; }
+                // ==================== BPF Map Operations ====================
+                bool updateBPFMap(const std::string &map_name, const void *key, const void *value);
+                bool deleteBPFMapEntry(const std::string &map_name, const void *key);
+                bool lookupBPFMap(const std::string &map_name, const void *key, void *value);
+                bool syncBlacklistsToBPF();
 
                 // ==================== Statistics ====================
-                /**
-                 * @brief Get current statistics
-                 */
-                XDPStatistics getStatistics() const;
-
-                /**
-                 * @brief Reset statistics
-                 */
+                XDPStats getStatistics() const;
                 void resetStatistics();
-
-                /**
-                 * @brief Update statistics from BPF map (kernel-side)
-                 */
-                bool updateStatisticsFromKernel();
-
-                /**
-                 * @brief Print statistics to logger
-                 */
+                void updateStatistics();
                 void printStatistics() const;
 
-                /**
-                 * @brief Get statistics as formatted string
-                 */
-                std::string getStatisticsString() const;
+                // ==================== Configuration ====================
+                void setConfig(const XDPFilterConfig &config);
+                XDPFilterConfig getConfig() const;
+                
+                bool setRateLimit(uint32_t pps);
+                uint32_t getRateLimit() const;
 
-                // ==================== BPF Map Synchronization ====================
-                /**
-                 * @brief Sync blacklist to kernel BPF map
-                 * Must be called after modifying blacklist
-                 */
-                bool syncBlacklistToKernel();
-
-                /**
-                 * @brief Sync rate limit config to kernel BPF map
-                 */
-                bool syncRateLimitConfigToKernel();
-
-                // ==================== Utility ====================
-                /**
-                 * @brief Get interface name
-                 */
-                const std::string& getInterface() const { return interface_; }
-
-                /**
-                 * @brief Get interface index
-                 */
-                int getInterfaceIndex() const { return if_index_; }
-
-                /**
-                 * @brief Get XDP mode
-                 */
-                XDPMode getMode() const { return mode_; }
-
-                /**
-                 * @brief Get blacklist file path
-                 */
-                const std::string& getBlacklistFile() const { return blacklist_file_; }
-
-                /**
-                 * @brief Check if interface supports XDP
-                 */
-                static bool isXDPSupported(const std::string& interface);
-
-                /**
-                 * @brief Get XDP mode string
-                 */
-                static std::string xdpModeToString(XDPMode mode);
-
-                /**
-                 * @brief Parse CIDR notation (e.g., "192.168.1.0/24")
-                 * @param cidr CIDR string
-                 * @param ip_out Output IP address
-                 * @param netmask_out Output netmask
-                 * @return true if parsing successful
-                 */
-                static bool parseCIDR(const std::string& cidr, 
-                                     uint32_t& ip_out, 
-                                     uint32_t& netmask_out);
+                // ==================== Status ====================
+                bool isRunning() const { return is_running_; }
+                bool isAttached() const { return is_attached_; }
+                std::string getInterfaceName() const { return config_.interface_name; }
+                int getInterfaceIndex() const { return interface_index_; }
 
             private:
                 // ==================== Internal Methods ====================
-                bool loadBPFProgram(const std::string& bpf_program_path);
-                bool setupBPFMaps();
-                void cleanupBPFMaps();
-                bool parseBlacklistLine(const std::string& line, BlacklistEntry& entry);
-                uint32_t prefixLenToNetmask(int prefix_len);
-                int netmaskToPrefixLen(uint32_t netmask);
+                int getInterfaceIndexByName(const std::string &interface_name);
+                bool createBPFMaps();
+                bool loadBPFObject();
+                bool findBPFMaps();
+                
+                uint32_t ipStringToInt(const std::string &ip) const;
+                std::string ipIntToString(uint32_t ip) const;
+                
+                bool validateIPAddress(const std::string &ip) const;
+                bool validateDomain(const std::string &domain) const;
+                bool validateHash(const std::string &hash) const;
+
+                void startBlacklistSyncThread();
+                void stopBlacklistSyncThread();
+                void blacklistSyncLoop();
 
                 // ==================== Member Variables ====================
-                // Interface info
-                std::string interface_;
-                int if_index_;
-                XDPMode mode_;
-                bool is_attached_;
-
-                // BPF program
-                struct bpf_object* bpf_obj_;
-                struct bpf_program* bpf_prog_;
+                XDPFilterConfig config_;
+                
+                // BPF related (using forward declarations)
+                struct bpf_object *bpf_obj_;
+                struct bpf_program *bpf_prog_;
+                struct bpf_link *bpf_link_;
                 int prog_fd_;
-                std::string bpf_program_path_;
-
-                // BPF maps file descriptors
-                int blacklist_map_fd_;      // BPF map for blacklist
-                int stats_map_fd_;          // BPF map for statistics
-                int config_map_fd_;         // BPF map for configuration
-
-                // Blacklist
-                std::string blacklist_file_;
-                std::vector<BlacklistEntry> blacklist_entries_;
+                int interface_index_;
+                
+                // BPF Maps
+                int ip_blacklist_map_fd_;
+                int domain_blacklist_map_fd_;
+                int hash_blacklist_map_fd_;
+                int stats_map_fd_;
+                int config_map_fd_;
+                
+                // Blacklist storage (userspace cache)
+                std::unordered_set<uint32_t> ip_blacklist_;
+                std::unordered_set<std::string> domain_blacklist_;
+                std::unordered_set<std::string> hash_blacklist_;
+                std::unordered_map<uint32_t, BlacklistEntry> ip_blacklist_details_;
+                
                 mutable std::mutex blacklist_mutex_;
-
-                // Rate limiting
-                RateLimitConfig rate_limit_config_;
-                std::unordered_map<uint32_t, RateLimitEntry> rate_limit_entries_;
-                mutable std::mutex rate_limit_mutex_;
-                std::atomic<bool> rate_limit_enabled_;
-
-                // Malformed detection
-                std::atomic<bool> malformed_detection_enabled_;
-
+                
                 // Statistics
-                mutable XDPStatistics statistics_;
+                mutable XDPStats stats_;
                 mutable std::mutex stats_mutex_;
-
+                
+                // State
+                std::atomic<bool> is_running_;
+                std::atomic<bool> is_attached_;
+                std::atomic<bool> sync_thread_stop_;
+                
+                std::thread sync_thread_;
+                
                 // Logger
                 std::shared_ptr<Common::Logger> logger_;
-
-                // Auto-reload thread
-                std::atomic<bool> auto_reload_enabled_;
-                std::unique_ptr<std::thread> reload_thread_;
-                std::atomic<bool> reload_thread_running_;
-                uint64_t last_blacklist_mtime_;  // Last modification time
-            };
-
-            /**
-             * @brief XDP Filter Builder (Fluent Interface)
-             */
-            class XDPFilterBuilder
-            {
-            public:
-                XDPFilterBuilder();
-
-                XDPFilterBuilder& setInterface(const std::string& interface);
-                XDPFilterBuilder& setBPFProgram(const std::string& path);
-                XDPFilterBuilder& setBlacklistFile(const std::string& path);
-                XDPFilterBuilder& setMode(XDPMode mode);
-                XDPFilterBuilder& enableRateLimit(bool enable);
-                XDPFilterBuilder& enableMalformedDetection(bool enable);
-                XDPFilterBuilder& setRateLimitConfig(const RateLimitConfig& config);
-
-                std::unique_ptr<XDPFilter> build();
-
-            private:
-                std::string interface_;
-                std::string bpf_program_path_;
-                std::string blacklist_file_;
-                XDPMode mode_;
-                bool rate_limit_enabled_;
-                bool malformed_detection_enabled_;
-                RateLimitConfig rate_limit_config_;
             };
 
         } // namespace Layer1
     }     // namespace Core
 } // namespace NetworkSecurity
 
-#endif // XDP_FILTER_HPP
+#endif // NETWORK_SECURITY_XDP_FILTER_HPP

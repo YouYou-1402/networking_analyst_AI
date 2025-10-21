@@ -17,7 +17,7 @@ extern char** environ;
 
 namespace NetworkSecurity {
 namespace Common {
-    // Định nghĩa biến environ
+    // Định nghĩa biến enviro
     char** environ = ::environ;
 }
 }
@@ -167,7 +167,8 @@ namespace NetworkSecurity
                 
                 json j = json::parse(clean_json);
                 
-                std::unique_lock<std::shared_mutex> lock(config_mutex_);
+                // KHÔNG lock ở đây, để parseJsonRecursive tự lock
+                // std::unique_lock<std::shared_mutex> lock(config_mutex_);  ← XÓA DÒNG NÀY
                 
                 // Parse JSON recursively
                 return parseJsonRecursive(j.dump(), "");
@@ -183,7 +184,6 @@ namespace NetworkSecurity
                 return false;
             }
         }
-
         std::string ConfigManager::exportToJson() const
         {
             std::shared_lock<std::shared_mutex> lock(config_mutex_);
@@ -274,6 +274,7 @@ namespace NetworkSecurity
             {
                 json j = json::parse(json_str);
                 
+                // KHÔNG lock ở đây vì setString/setInt/... đã tự lock
                 for (auto it = j.begin(); it != j.end(); ++it)
                 {
                     std::string key = prefix.empty() ? it.key() : prefix + "." + it.key();
@@ -329,10 +330,15 @@ namespace NetworkSecurity
         // ==================== Environment Variables ====================
         void ConfigManager::loadFromEnvironment(const std::string &prefix)
         {
-            std::unique_lock<std::shared_mutex> lock(config_mutex_);
-            
-            // Get all environment variables
+            // Lấy environment variables
             extern char **environ;
+            
+            if (environ == nullptr)
+            {
+                std::cerr << "Environment variables not available" << std::endl;
+                return;
+            }
+            
             for (char **env = environ; *env != nullptr; ++env)
             {
                 std::string env_var(*env);
@@ -345,7 +351,11 @@ namespace NetworkSecurity
                 // Check prefix
                 if (!prefix.empty())
                 {
-                    if (key.substr(0, prefix.length()) != prefix) continue;
+                    if (key.length() < prefix.length() || 
+                        key.substr(0, prefix.length()) != prefix)
+                    {
+                        continue;
+                    }
                     key = key.substr(prefix.length());
                 }
                 
@@ -373,6 +383,8 @@ namespace NetworkSecurity
             }
         }
 
+
+
         // ==================== Command Line Arguments ====================
         void ConfigManager::loadFromCommandLine(int argc, char *argv[])
         {
@@ -381,41 +393,39 @@ namespace NetworkSecurity
                 std::string arg(argv[i]);
                 
                 // Handle --key=value format
-                if (arg.substr(0, 2) == "--")
+                if (arg.substr(0, 2) == "--" && arg.find('=') != std::string::npos)
                 {
                     size_t eq_pos = arg.find('=');
-                    if (eq_pos != std::string::npos)
+                    std::string key = arg.substr(2, eq_pos - 2);
+                    std::string value = arg.substr(eq_pos + 1);
+                    
+                    // Replace hyphens with dots
+                    std::replace(key.begin(), key.end(), '-', '.');
+                    
+                    // Auto-detect type and set
+                    if (value == "true" || value == "false")
                     {
-                        std::string key = arg.substr(2, eq_pos - 2);
-                        std::string value = arg.substr(eq_pos + 1);
-                        
-                        // Replace hyphens with dots
-                        std::replace(key.begin(), key.end(), '-', '.');
-                        
-                        // Auto-detect type and set
-                        if (value == "true" || value == "false")
-                        {
-                            setBool(key, value == "true");
-                        }
-                        else if (std::regex_match(value, std::regex(R"(^-?\d+$)")))
-                        {
-                            setInt(key, std::stoi(value));
-                        }
-                        else if (std::regex_match(value, std::regex(R"(^-?\d+\.\d+$)")))
-                        {
-                            setDouble(key, std::stod(value));
-                        }
-                        else
-                        {
-                            setString(key, value);
-                        }
+                        setBool(key, value == "true");
+                    }
+                    else if (std::regex_match(value, std::regex(R"(^-?\d+$)")))
+                    {
+                        setInt(key, std::stoi(value));
+                    }
+                    else if (std::regex_match(value, std::regex(R"(^-?\d+\.\d+$)")))
+                    {
+                        setDouble(key, std::stod(value));
+                    }
+                    else
+                    {
+                        setString(key, value);
                     }
                 }
                 // Handle --key value format
-                else if (arg.substr(0, 2) == "--" && i + 1 < argc)
+                else if (arg.substr(0, 2) == "--" && i + 1 < argc)  // ← SỬA: thêm điều kiện i+1 < argc
                 {
                     std::string key = arg.substr(2);
-                    std::string value = argv[++i];
+                    std::string value = argv[i + 1];  // ← SỬA: lấy giá trị từ argv[i+1]
+                    i++;  // ← SỬA: tăng i để skip value
                     
                     std::replace(key.begin(), key.end(), '-', '.');
                     
@@ -440,6 +450,7 @@ namespace NetworkSecurity
             }
         }
 
+
         // ==================== Set Methods ====================
         bool ConfigManager::setString(const std::string &key, const std::string &value, const std::string &description)
         {
@@ -450,6 +461,7 @@ namespace NetworkSecurity
         {
             return setValue(key, value, ConfigType::INTEGER, description);
         }
+
 
         bool ConfigManager::setDouble(const std::string &key, double value, const std::string &description)
         {
@@ -504,7 +516,7 @@ namespace NetworkSecurity
             {
                 // Preserve existing settings
                 entry.is_required = it->second.is_required;
-                entry.is_readonly = it->second.is_readonly;
+                entry.is_readonly = it->second.is_readonly;  // ← QUAN TRỌNG: giữ readonly flag
                 entry.validator = it->second.validator;
             }
 
@@ -520,13 +532,11 @@ namespace NetworkSecurity
             lock.unlock();
 
             // Notify change
-            if (key_existed)
-            {
-                notifyChange(key, old_value, value);
-            }
+            notifyChange(key, key_existed ? old_value : std::any{}, value);
 
             return true;
         }
+
 
         // ==================== Get Methods ====================
         std::string ConfigManager::getString(const std::string &key, const std::string &default_value) const
@@ -986,35 +996,42 @@ namespace NetworkSecurity
 
         void ConfigManager::notifyChange(const std::string &key, const std::any &old_value, const std::any &new_value)
         {
-            std::lock_guard<std::mutex> lock(callback_mutex_);
+            // Copy callbacks to avoid deadlock
+            ConfigChangeCallback key_callback;
+            ConfigChangeCallback global_callback;
             
-            // Call specific key callback
-            auto it = change_callbacks_.find(key);
-            if (it != change_callbacks_.end() && it->second)
             {
-                try
+                std::lock_guard<std::mutex> lock(callback_mutex_);
+                
+                auto it = change_callbacks_.find(key);
+                if (it != change_callbacks_.end())
                 {
-                    it->second(key, old_value, new_value);
+                    key_callback = it->second;
                 }
-                catch (const std::exception &e)
-                {
-                    std::cerr << "Error in change callback for key " << key << ": " << e.what() << std::endl;
+                
+                global_callback = global_change_callback_;
+            }
+            
+            // Call callbacks outside lock
+            if (key_callback)
+            {
+                try {
+                    key_callback(key, old_value, new_value);
+                } catch (const std::exception& e) {
+                    std::cerr << "Exception in key callback: " << e.what() << std::endl;
                 }
             }
-
-            // Call global callback
-            if (global_change_callback_)
+            
+            if (global_callback)
             {
-                try
-                {
-                    global_change_callback_(key, old_value, new_value);
-                }
-                catch (const std::exception &e)
-                {
-                    std::cerr << "Error in global change callback: " << e.what() << std::endl;
+                try {
+                    global_callback(key, old_value, new_value);
+                } catch (const std::exception& e) {
+                    std::cerr << "Exception in global callback: " << e.what() << std::endl;
                 }
             }
         }
+
 
         // ==================== Advanced Features ====================
         bool ConfigManager::merge(const ConfigManager &other, bool overwrite)
