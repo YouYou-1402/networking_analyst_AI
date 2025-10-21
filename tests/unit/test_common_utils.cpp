@@ -213,10 +213,12 @@ TEST_F(UtilsTest, CalculateMD5Binary) {
 TEST_F(UtilsTest, CalculateSHA256String) {
     std::string result = Utils::calculateSHA256("hello");
     EXPECT_EQ(result.length(), 64); // SHA256 is 64 hex chars
-    EXPECT_EQ(result, "2cf24dba4f21d4288094c3b9b3b3e2b9b3b3e2b9b3b3e2b9b3b3e2b9b3b3e2b9");
+    // Đúng SHA256 của "hello"
+    EXPECT_EQ(result, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
     
-    // Note: Actual SHA256 of "hello" is different, this is just format check
-    // Real SHA256 of "hello": 2cf24dba4f21d4288094c3b9b3b3e2b9b3b3e2b9b3b3e2b9b3b3e2b9b3b3e2b9
+    // Test empty string
+    std::string empty_result = Utils::calculateSHA256("");
+    EXPECT_EQ(empty_result.length(), 64);
 }
 
 TEST_F(UtilsTest, CalculateSHA256Binary) {
@@ -421,16 +423,25 @@ TEST_F(UtilsTest, HexToBytes) {
 }
 
 TEST_F(UtilsTest, HexDump) {
-    uint8_t data[] = {0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64}; // "Hello World"
-    
+    const char* data = "Hello";
     std::stringstream ss;
-    Utils::hexDump(data, sizeof(data), ss, 8);
     
+    Utils::hexDump(data, 5, ss);
     std::string output = ss.str();
-    EXPECT_FALSE(output.empty());
-    EXPECT_NE(output.find("48656c6c"), std::string::npos); // Should contain hex
-    EXPECT_NE(output.find("Hello"), std::string::npos); // Should contain ASCII
+    
+    // Kiểm tra có chứa các byte hex (có thể có space)
+    EXPECT_NE(output.find("48"), std::string::npos); // 'H'
+    EXPECT_NE(output.find("65"), std::string::npos); // 'e'
+    EXPECT_NE(output.find("6c"), std::string::npos); // 'l'
+    EXPECT_NE(output.find("6f"), std::string::npos); // 'o'
+    
+    // Kiểm tra có chứa ASCII representation
+    EXPECT_NE(output.find("Hello"), std::string::npos);
+    
+    // Kiểm tra có offset
+    EXPECT_NE(output.find("00000000:"), std::string::npos);
 }
+
 
 TEST_F(UtilsTest, SecureMemoryCompare) {
     uint8_t data1[] = {0x01, 0x02, 0x03, 0x04};

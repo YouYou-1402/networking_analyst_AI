@@ -1,6 +1,6 @@
 // tests/unit/test_common_logger.cpp
 #include <gtest/gtest.h>
-#include "logger.hpp"
+#include "../../src/common/logger.hpp"
 #include <fstream>
 #include <thread>
 #include <chrono>
