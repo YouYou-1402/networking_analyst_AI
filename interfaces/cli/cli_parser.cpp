@@ -1,4 +1,4 @@
-// src/interfaces/cli/cli_parser.cpp
+// interfaces/cli/cli_parser.cpp
 #include "cli_parser.hpp"
 #include <iostream>
 #include <sstream>

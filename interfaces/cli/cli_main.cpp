@@ -1,4 +1,4 @@
-// src/interfaces/cli/cli_main.cpp
+// interfaces/cli/cli_main.cpp
 #include "cli_commands.hpp"
 #include <iostream>
 #include <signal.h>

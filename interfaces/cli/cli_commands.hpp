@@ -1,4 +1,4 @@
-// src/interfaces/cli/cli_commands.hpp
+// interfaces/cli/cli_commands.hpp
 #ifndef NETWORK_SECURITY_CLI_COMMANDS_HPP
 #define NETWORK_SECURITY_CLI_COMMANDS_HPP
 

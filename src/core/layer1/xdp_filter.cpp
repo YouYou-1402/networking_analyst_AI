@@ -163,11 +163,47 @@ namespace NetworkSecurity
 
             bool XDPFilter::loadBPFObject()
             {
-                // Open BPF object file
-                bpf_obj_ = bpf_object__open(config_.xdp_program_path.c_str());
-                if (!bpf_obj_)
+                // Try multiple paths for BPF object file
+                const char* bpf_paths[] = {
+                    config_.xdp_program_path.c_str(),              // User-specified path
+                    "/usr/local/share/nsai/bpf/xdp_filter.bpf.o",  // Installed path
+                    "build/xdp_filter.bpf.o",                       // Local build
+                    "./xdp_filter.bpf.o",                           // Current directory
+                    "xdp_filter.bpf.o"                              // Relative path
+                };
+                
+                bool loaded = false;
+                for (const char* path : bpf_paths)
                 {
-                    logger_->error("Failed to open BPF object file: " + config_.xdp_program_path);
+                    // Skip empty paths
+                    if (!path || strlen(path) == 0)
+                        continue;
+                        
+                    logger_->debug("Trying to load BPF from: " + std::string(path));
+                    
+                    // Open BPF object file
+                    bpf_obj_ = bpf_object__open(path);
+                    if (bpf_obj_)
+                    {
+                        logger_->info("Successfully opened BPF object from: " + std::string(path));
+                        loaded = true;
+                        break;
+                    }
+                    else
+                    {
+                        logger_->debug("Failed to open: " + std::string(path));
+                    }
+                }
+                
+                if (!loaded || !bpf_obj_)
+                {
+                    logger_->error("Failed to open BPF object file from any location");
+                    logger_->error("Tried paths:");
+                    for (const char* path : bpf_paths)
+                    {
+                        if (path && strlen(path) > 0)
+                            logger_->error("  - " + std::string(path));
+                    }
                     return false;
                 }
                 
@@ -182,6 +218,7 @@ namespace NetworkSecurity
                 
                 return true;
             }
+
 
             bool XDPFilter::findBPFMaps()
             {

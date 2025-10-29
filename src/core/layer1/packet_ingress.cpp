@@ -1,10 +1,14 @@
 // src/core/layer1/packet_ingress.cpp
 #include "packet_ingress.hpp"
-#include "xdp_filter.hpp"
-#include "../../common/utils.hpp"
 #include <algorithm>
 #include <cstring>
 #include <chrono>
+#include <iomanip>
+#include <sstream>
+#include <arpa/inet.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 
 namespace NetworkSecurity
 {
@@ -17,112 +21,181 @@ namespace NetworkSecurity
             PacketIngress::PacketIngress()
                 : pcap_handle_(nullptr),
                   is_running_(false),
-                  is_capturing_(false),
-                  stop_requested_(false)
+                  is_capturing_(false)
             {
-                logger_ = std::make_shared<Common::Logger>("PacketIngress");
-                packet_parser_ = std::make_unique<Common::PacketParser>();
-                std::memset(pcap_errbuf_, 0, PCAP_ERRBUF_SIZE);
+                logger_ = std::make_shared<Common::Logger>();
+                logger_->log(Common::LogLevel::INFO, "PacketIngress", 
+                           "PacketIngress initialized");
             }
 
             PacketIngress::~PacketIngress()
             {
-                shutdown();
+                cleanup();
+                logger_->log(Common::LogLevel::INFO, "PacketIngress", 
+                           "PacketIngress destroyed");
             }
 
             // ==================== Initialization ====================
             
-            bool PacketIngress::initialize(const IngressConfig &config)
+            bool PacketIngress::initialize(const PacketIngressConfig& config)
             {
-                logger_->info("Initializing Packet Ingress...");
+                std::lock_guard<std::mutex> lock(error_mutex_);
+                
+                if (is_running_.load())
+                {
+                    last_error_ = "PacketIngress is already running";
+                    logger_->log(Common::LogLevel::ERROR, "PacketIngress", last_error_);
+                    return false;
+                }
                 
                 config_ = config;
                 
                 // Validate configuration
-                if (!validateConfig())
+                if (config_.interface.empty())
                 {
-                    logger_->error("Invalid configuration");
+                    last_error_ = "Interface name is empty";
+                    logger_->log(Common::LogLevel::ERROR, "PacketIngress", last_error_);
                     return false;
                 }
                 
-                // Initialize XDP filter if enabled
-                if (config_.enable_xdp_filter && !xdp_filter_)
+                // Check if interface exists
+                if (!isInterfaceAvailable(config_.interface) && config_.interface != "any")
                 {
-                    logger_->info("XDP filter enabled but not set, creating default XDP filter");
-                    xdp_filter_ = std::make_shared<XDPFilter>();
-                    
-                    XDPFilterConfig xdp_config;
-                    xdp_config.interface_name = config_.interface_name;
-                    
-                    if (!xdp_filter_->initialize(xdp_config))
+                    last_error_ = "Interface '" + config_.interface + "' not found";
+                    logger_->log(Common::LogLevel::ERROR, "PacketIngress", last_error_);
+                    return false;
+                }
+                
+                // Open PCAP handle
+                char errbuf[PCAP_ERRBUF_SIZE];
+                pcap_handle_ = pcap_open_live(
+                    config_.interface.c_str(),
+                    config_.snaplen,
+                    config_.promiscuous ? 1 : 0,
+                    config_.timeout_ms,
+                    errbuf
+                );
+                
+                if (pcap_handle_ == nullptr)
+                {
+                    last_error_ = std::string("Failed to open interface: ") + errbuf;
+                    logger_->log(Common::LogLevel::ERROR, "PacketIngress", last_error_);
+                    return false;
+                }
+                
+                // Set buffer size
+                if (pcap_set_buffer_size(pcap_handle_, config_.buffer_size) != 0)
+                {
+                    logger_->log(Common::LogLevel::WARN, "PacketIngress", 
+                               "Failed to set buffer size");
+                }
+                
+                // Apply BPF filter if specified
+                if (!config_.filter.empty())
+                {
+                    if (!updateFilter(config_.filter))
                     {
-                        logger_->warn("Failed to initialize XDP filter, continuing without it");
-                        xdp_filter_ = nullptr;
+                        pcap_close(pcap_handle_);
+                        pcap_handle_ = nullptr;
+                        return false;
                     }
                 }
                 
-                logger_->info("Packet Ingress initialized successfully");
+                // Set non-blocking mode
+                if (pcap_setnonblock(pcap_handle_, 1, errbuf) == -1)
+                {
+                    logger_->log(Common::LogLevel::WARN, "PacketIngress",
+                               std::string("Failed to set non-blocking mode: ") + errbuf);
+                }
+                
+                is_running_ = true;
+                
+                logger_->log(Common::LogLevel::INFO, "PacketIngress",
+                           "PacketIngress initialized successfully on interface: " + 
+                           config_.interface);
+                
                 return true;
             }
 
-            bool PacketIngress::start()
+            void PacketIngress::cleanup()
             {
-                if (is_running_)
+                stopCapture();
+                
+                is_running_ = false;
+                
+                // Close PCAP handle
+                if (pcap_handle_ != nullptr)
                 {
-                    logger_->warn("Packet Ingress already running");
-                    return true;
+                    pcap_close(pcap_handle_);
+                    pcap_handle_ = nullptr;
                 }
                 
-                logger_->info("Starting Packet Ingress...");
+                // Clear callbacks
+                clearCallbacks();
                 
-                // Open interface
-                if (!openInterface())
+                logger_->log(Common::LogLevel::INFO, "PacketIngress", 
+                           "PacketIngress cleaned up");
+            }
+
+            // ==================== Capture Control ====================
+            
+            bool PacketIngress::startCapture()
+            {
+                if (is_capturing_.load())
                 {
-                    logger_->error("Failed to open interface");
+                    logger_->log(Common::LogLevel::WARN, "PacketIngress", 
+                               "Capture already running");
                     return false;
                 }
                 
-                // Set filter if specified
-                if (!config_.capture_filter.empty())
+                if (!is_running_.load() || pcap_handle_ == nullptr)
                 {
-                    if (!setFilter(config_.capture_filter))
-                    {
-                        logger_->warn("Failed to set capture filter: " + config_.capture_filter);
-                    }
+                    last_error_ = "PacketIngress not initialized";
+                    logger_->log(Common::LogLevel::ERROR, "PacketIngress", last_error_);
+                    return false;
                 }
+                
+                is_capturing_ = true;
                 
                 // Reset statistics
                 resetStatistics();
                 
-                // Start worker threads
-                startWorkerThreads();
-                
                 // Start capture thread
-                is_running_ = true;
-                stop_requested_ = false;
-                capture_thread_ = std::thread(&PacketIngress::captureLoop, this);
+                capture_thread_ = std::thread(&PacketIngress::captureThread, this);
                 
-                logger_->info("Packet Ingress started successfully");
+                // Start processing threads
+                processing_threads_.clear();
+                for (int i = 0; i < config_.num_threads; ++i)
+                {
+                    processing_threads_.emplace_back(&PacketIngress::processingThread, this);
+                }
+                
+                // Start metrics update thread
+                metrics_thread_ = std::thread(&PacketIngress::metricsUpdateThread, this);
+                
+                logger_->log(Common::LogLevel::INFO, "PacketIngress", 
+                           "Packet capture started");
+                
                 return true;
             }
 
-            void PacketIngress::stop()
+            void PacketIngress::stopCapture()
             {
-                if (!is_running_)
+                if (!is_capturing_.load())
                 {
                     return;
                 }
                 
-                logger_->info("Stopping Packet Ingress...");
+                is_capturing_ = false;
                 
-                stop_requested_ = true;
-                is_running_ = false;
-                
-                // Break pcap loop
-                if (pcap_handle_)
+                // Stop PCAP loop
+                if (pcap_handle_ != nullptr)
                 {
                     pcap_breakloop(pcap_handle_);
                 }
+                
+                // Notify all processing threads
+                queue_cv_.notify_all();
                 
                 // Wait for capture thread
                 if (capture_thread_.joinable())
@@ -130,18 +203,21 @@ namespace NetworkSecurity
                     capture_thread_.join();
                 }
                 
-                // Stop worker threads
-                stopWorkerThreads();
+                // Wait for processing threads
+                for (auto& thread : processing_threads_)
+                {
+                    if (thread.joinable())
+                    {
+                        thread.join();
+                    }
+                }
+                processing_threads_.clear();
                 
-                // Close interface
-                closeInterface();
-                
-                logger_->info("Packet Ingress stopped");
-            }
-
-            void PacketIngress::shutdown()
-            {
-                stop();
+                // Wait for metrics thread
+                if (metrics_thread_.joinable())
+                {
+                    metrics_thread_.join();
+                }
                 
                 // Clear packet queue
                 {
@@ -152,251 +228,205 @@ namespace NetworkSecurity
                     }
                 }
                 
-                logger_->info("Packet Ingress shut down");
+                logger_->log(Common::LogLevel::INFO, "PacketIngress", 
+                           "Packet capture stopped");
+                printStatistics();
             }
 
-            // ==================== Packet Capture ====================
+            // ==================== Callback Registration ====================
             
-            bool PacketIngress::openInterface()
+            void PacketIngress::registerCallback(const std::string& name, PacketCallback callback)
             {
-                logger_->info("Opening interface: " + config_.interface_name);
-                
-                // Open live capture
-                pcap_handle_ = pcap_open_live(
-                    config_.interface_name.c_str(),
-                    config_.snaplen,
-                    config_.promiscuous_mode ? 1 : 0,
-                    config_.timeout_ms,
-                    pcap_errbuf_
-                );
-                
-                if (!pcap_handle_)
-                {
-                    logger_->error("Failed to open interface: " + std::string(pcap_errbuf_));
-                    return false;
-                }
-                
-                // Set buffer size
-                if (pcap_set_buffer_size(pcap_handle_, config_.buffer_size) != 0)
-                {
-                    logger_->warn("Failed to set buffer size");
-                }
-                
-                // Set immediate mode (don't wait for buffer to fill)
-                if (pcap_set_immediate_mode(pcap_handle_, 1) != 0)
-                {
-                    logger_->warn("Failed to set immediate mode");
-                }
-                
-                logger_->info("Interface opened successfully");
-                return true;
+                std::unique_lock<std::shared_mutex> lock(callbacks_mutex_);
+                callbacks_[name] = callback;
+                logger_->log(Common::LogLevel::INFO, "PacketIngress", 
+                           "Registered callback: " + name);
             }
 
-            bool PacketIngress::closeInterface()
+            void PacketIngress::unregisterCallback(const std::string& name)
             {
-                if (pcap_handle_)
+                std::unique_lock<std::shared_mutex> lock(callbacks_mutex_);
+                auto it = callbacks_.find(name);
+                if (it != callbacks_.end())
                 {
-                    logger_->info("Closing interface: " + config_.interface_name);
-                    pcap_close(pcap_handle_);
-                    pcap_handle_ = nullptr;
+                    callbacks_.erase(it);
+                    logger_->log(Common::LogLevel::INFO, "PacketIngress", 
+                               "Unregistered callback: " + name);
                 }
-                return true;
             }
 
-            bool PacketIngress::setFilter(const std::string &filter_expression)
+            void PacketIngress::clearCallbacks()
             {
-                if (!pcap_handle_)
+                std::unique_lock<std::shared_mutex> lock(callbacks_mutex_);
+                callbacks_.clear();
+                logger_->log(Common::LogLevel::INFO, "PacketIngress", 
+                           "Cleared all callbacks");
+            }
+
+            // ==================== Statistics ====================
+            
+            PacketStatistics::Snapshot PacketIngress::getStatistics() const
+            {
+                std::lock_guard<std::mutex> lock(stats_mutex_);
+                return stats_.getSnapshot();
+            }
+
+            void PacketIngress::resetStatistics()
+            {
+                std::lock_guard<std::mutex> lock(stats_mutex_);
+                stats_.reset();
+                logger_->log(Common::LogLevel::INFO, "PacketIngress", "Statistics reset");
+            }
+
+            void PacketIngress::printStatistics() const
+            {
+                std::lock_guard<std::mutex> lock(stats_mutex_);
+                
+                auto snap = stats_.getSnapshot();
+                auto now = std::chrono::steady_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::seconds>(
+                    now - snap.start_time).count();
+                
+                std::stringstream ss;
+                ss << "\n=== Packet Ingress Statistics ===\n";
+                ss << "Duration: " << duration << " seconds\n";
+                ss << "Total Packets: " << snap.total_packets << "\n";
+                ss << "Total Bytes: " << snap.total_bytes << "\n";
+                ss << "Dropped Packets: " << snap.dropped_packets << "\n";
+                ss << "Filtered Packets: " << snap.filtered_packets << "\n";
+                ss << "Error Packets: " << snap.error_packets << "\n";
+                ss << "\nProtocol Distribution:\n";
+                ss << "  TCP: " << snap.tcp_packets << "\n";
+                ss << "  UDP: " << snap.udp_packets << "\n";
+                ss << "  ICMP: " << snap.icmp_packets << "\n";
+                ss << "  Other: " << snap.other_packets << "\n";
+                ss << "\nPerformance:\n";
+                ss << "  Packets/sec: " << snap.packets_per_second << "\n";
+                ss << "  Bytes/sec: " << snap.bytes_per_second << "\n";
+                
+                if (duration > 0)
                 {
-                    logger_->error("Cannot set filter: interface not open");
-                    return false;
+                    ss << "  Average Packets/sec: " << (snap.total_packets / duration) << "\n";
+                    ss << "  Average Bytes/sec: " << (snap.total_bytes / duration) << "\n";
                 }
                 
-                logger_->info("Setting capture filter: " + filter_expression);
+                ss << "================================\n";
+                
+                logger_->log(Common::LogLevel::INFO, "PacketIngress", ss.str());
+                std::cout << ss.str();
+            }
+
+            // ==================== Configuration ====================
+            
+            bool PacketIngress::updateFilter(const std::string& filter)
+            {
+                if (pcap_handle_ == nullptr)
+                {
+                    last_error_ = "PCAP handle not initialized";
+                    logger_->log(Common::LogLevel::ERROR, "PacketIngress", last_error_);
+                    return false;
+                }
                 
                 struct bpf_program fp;
-                bpf_u_int32 net = 0;
-                bpf_u_int32 mask = 0;
-                
-                // Get network and mask
-                if (pcap_lookupnet(config_.interface_name.c_str(), &net, &mask, pcap_errbuf_) == -1)
-                {
-                    logger_->warn("Failed to get network info: " + std::string(pcap_errbuf_));
-                    net = 0;
-                    mask = 0;
-                }
                 
                 // Compile filter
-                if (pcap_compile(pcap_handle_, &fp, filter_expression.c_str(), 1, mask) == -1)
+                if (pcap_compile(pcap_handle_, &fp, filter.c_str(), 1, PCAP_NETMASK_UNKNOWN) == -1)
                 {
-                    logger_->error("Failed to compile filter: " + std::string(pcap_geterr(pcap_handle_)));
+                    last_error_ = std::string("Failed to compile filter: ") + 
+                                 pcap_geterr(pcap_handle_);
+                    logger_->log(Common::LogLevel::ERROR, "PacketIngress", last_error_);
                     return false;
                 }
                 
-                // Set filter
+                // Apply filter
                 if (pcap_setfilter(pcap_handle_, &fp) == -1)
                 {
-                    logger_->error("Failed to set filter: " + std::string(pcap_geterr(pcap_handle_)));
+                    last_error_ = std::string("Failed to set filter: ") + 
+                                 pcap_geterr(pcap_handle_);
+                    logger_->log(Common::LogLevel::ERROR, "PacketIngress", last_error_);
                     pcap_freecode(&fp);
                     return false;
                 }
                 
                 pcap_freecode(&fp);
-                logger_->info("Capture filter set successfully");
+                
+                config_.filter = filter;
+                logger_->log(Common::LogLevel::INFO, "PacketIngress", 
+                           "Filter updated: " + filter);
+                
                 return true;
             }
 
-            void PacketIngress::captureLoop()
+            std::vector<std::string> PacketIngress::getAvailableInterfaces()
             {
-                logger_->info("Capture loop started");
-                is_capturing_ = true;
+                std::vector<std::string> interfaces;
                 
-                // Use pcap_loop with callback
-                int result = pcap_loop(pcap_handle_, -1, pcapCallbackStatic, reinterpret_cast<u_char *>(this));
+                char errbuf[PCAP_ERRBUF_SIZE];
+                pcap_if_t* alldevs;
                 
-                if (result == -1)
+                if (pcap_findalldevs(&alldevs, errbuf) == -1)
                 {
-                    logger_->error("pcap_loop error: " + std::string(pcap_geterr(pcap_handle_)));
-                }
-                else if (result == -2)
-                {
-                    logger_->info("pcap_loop stopped by breakloop");
+                    return interfaces;
                 }
                 
-                is_capturing_ = false;
-                logger_->info("Capture loop ended");
+                for (pcap_if_t* dev = alldevs; dev != nullptr; dev = dev->next)
+                {
+                    interfaces.push_back(dev->name);
+                }
+                
+                pcap_freealldevs(alldevs);
+                
+                return interfaces;
             }
 
-            void PacketIngress::pcapCallbackStatic(u_char *user, const struct pcap_pkthdr *header, const u_char *packet)
+            bool PacketIngress::isInterfaceAvailable(const std::string& interface)
             {
-                PacketIngress *ingress = reinterpret_cast<PacketIngress *>(user);
-                ingress->pcapCallback(header, packet);
+                auto interfaces = getAvailableInterfaces();
+                return std::find(interfaces.begin(), interfaces.end(), interface) != 
+                       interfaces.end();
             }
 
-            void PacketIngress::pcapCallback(const struct pcap_pkthdr *header, const u_char *packet)
-            {
-                // Update statistics
-                {
-                    std::lock_guard<std::mutex> lock(stats_mutex_);
-                    stats_.total_packets_received++;
-                    stats_.total_bytes_received += header->len;
-                }
-                
-                // Create packet buffer
-                PacketBuffer pkt_buffer;
-                pkt_buffer.length = header->caplen;
-                pkt_buffer.timestamp = header->ts.tv_sec * 1000000ULL + header->ts.tv_usec;
-                pkt_buffer.interface_name = config_.interface_name;
-                
-                // Copy packet data
-                pkt_buffer.data = new uint8_t[header->caplen];
-                std::memcpy(pkt_buffer.data, packet, header->caplen);
-                
-                // Enqueue packet
-                if (!enqueuePacket(std::move(pkt_buffer)))
-                {
-                    std::lock_guard<std::mutex> lock(stats_mutex_);
-                    stats_.queue_full_drops++;
-                }
-            }
-
-            // ==================== Queue Management ====================
+            // ==================== Internal Methods ====================
             
-            bool PacketIngress::enqueuePacket(PacketBuffer &&packet)
+            void PacketIngress::captureThread()
             {
-                std::unique_lock<std::mutex> lock(queue_mutex_);
+                logger_->log(Common::LogLevel::INFO, "PacketIngress", "Capture thread started");
                 
-                if (packet_queue_.size() >= config_.packet_queue_size)
+                while (is_capturing_.load())
                 {
-                    return false; // Queue full
-                }
-                
-                packet_queue_.push(std::move(packet));
-                
-                {
-                    std::lock_guard<std::mutex> stats_lock(stats_mutex_);
-                    stats_.packets_queued++;
-                }
-                
-                lock.unlock();
-                queue_cv_.notify_one();
-                
-                return true;
-            }
-
-            bool PacketIngress::dequeuePacket(PacketBuffer &packet)
-            {
-                std::unique_lock<std::mutex> lock(queue_mutex_);
-                
-                if (packet_queue_.empty())
-                {
-                    return false;
-                }
-                
-                packet = std::move(packet_queue_.front());
-                packet_queue_.pop();
-                
-                return true;
-            }
-
-            size_t PacketIngress::getQueueSize() const
-            {
-                std::lock_guard<std::mutex> lock(queue_mutex_);
-                return packet_queue_.size();
-            }
-
-            bool PacketIngress::isQueueFull() const
-            {
-                std::lock_guard<std::mutex> lock(queue_mutex_);
-                return packet_queue_.size() >= config_.packet_queue_size;
-            }
-
-            // ==================== Worker Threads ====================
-            
-            void PacketIngress::startWorkerThreads()
-            {
-                logger_->info("Starting " + std::to_string(config_.worker_threads) + " worker threads");
-                
-                for (int i = 0; i < config_.worker_threads; ++i)
-                {
-                    worker_threads_.emplace_back(&PacketIngress::workerThread, this, i);
-                }
-            }
-
-            void PacketIngress::stopWorkerThreads()
-            {
-                logger_->info("Stopping worker threads...");
-                
-                // Notify all workers
-                queue_cv_.notify_all();
-                
-                // Wait for all workers to finish
-                for (auto &thread : worker_threads_)
-                {
-                    if (thread.joinable())
+                    int result = pcap_dispatch(pcap_handle_, -1, pcapCallback, 
+                                              reinterpret_cast<u_char*>(this));
+                    
+                    if (result == -1)
                     {
-                        thread.join();
+                        logger_->log(Common::LogLevel::ERROR, "PacketIngress",
+                                   std::string("pcap_dispatch error: ") + 
+                                   pcap_geterr(pcap_handle_));
+                        break;
                     }
+                    else if (result == -2)
+                    {
+                        // pcap_breakloop() was called
+                        break;
+                    }
+                    
+                    // Small sleep to prevent busy waiting
+                    std::this_thread::sleep_for(std::chrono::microseconds(100));
                 }
                 
-                worker_threads_.clear();
-                logger_->info("Worker threads stopped");
+                logger_->log(Common::LogLevel::INFO, "PacketIngress", "Capture thread stopped");
             }
 
-            void PacketIngress::workerThread(int thread_id)
+            void PacketIngress::processingThread()
             {
-                logger_->debug("Worker thread " + std::to_string(thread_id) + " started");
-                
-                while (is_running_ || !packet_queue_.empty())
+                while (is_capturing_.load() || !packet_queue_.empty())
                 {
-                    PacketBuffer packet;
+                    PacketData packet_data;
                     
                     {
                         std::unique_lock<std::mutex> lock(queue_mutex_);
-                        
-                        // Wait for packet or stop signal
-                        queue_cv_.wait_for(lock, std::chrono::milliseconds(100), [this]
-                        {
-                            return !packet_queue_.empty() || !is_running_;
+                        queue_cv_.wait_for(lock, std::chrono::milliseconds(100), [this]() {
+                            return !packet_queue_.empty() || !is_capturing_.load();
                         });
                         
                         if (packet_queue_.empty())
@@ -404,174 +434,133 @@ namespace NetworkSecurity
                             continue;
                         }
                         
-                        packet = std::move(packet_queue_.front());
+                        packet_data = std::move(packet_queue_.front());
                         packet_queue_.pop();
                     }
                     
                     // Process packet
+                    processPacket(packet_data.data.data(), packet_data.length);
+                }
+            }
+
+            void PacketIngress::processPacket(const uint8_t* packet_data, size_t packet_len)
+            {
+                // Parse packet
+                Common::ParsedPacket parsed;
+                if (!parser_.parsePacket(packet_data, packet_len, parsed))
+                {
+                    stats_.error_packets.fetch_add(1);
+                    return;
+                }
+                
+                // Update protocol statistics
+                switch (parsed.protocol_type)
+                {
+                    case Common::ProtocolType::TCP:
+                        stats_.tcp_packets.fetch_add(1);
+                        break;
+                    case Common::ProtocolType::UDP:
+                        stats_.udp_packets.fetch_add(1);
+                        break;
+                    case Common::ProtocolType::ICMP:
+                    case Common::ProtocolType::ICMPV6:
+                        stats_.icmp_packets.fetch_add(1);
+                        break;
+                    default:
+                        stats_.other_packets.fetch_add(1);
+                        break;
+                }
+                
+                // Call registered callbacks
+                {
+                    std::shared_lock<std::shared_mutex> lock(callbacks_mutex_);
+                    for (const auto& [name, callback] : callbacks_)
                     {
-                        std::lock_guard<std::mutex> lock(stats_mutex_);
-                        stats_.packets_processed++;
-                    }
-                    
-                    // Call registered callback
-                    {
-                        std::lock_guard<std::mutex> lock(callback_mutex_);
-                        if (packet_callback_)
+                        try
                         {
-                            try
-                            {
-                                packet_callback_(packet);
-                            }
-                            catch (const std::exception &e)
-                            {
-                                logger_->error("Exception in packet callback: " + std::string(e.what()));
-                            }
+                            callback(parsed, packet_data, packet_len);
+                        }
+                        catch (const std::exception& e)
+                        {
+                            logger_->log(Common::LogLevel::ERROR, "PacketIngress",
+                                       "Callback '" + name + "' threw exception: " + e.what());
                         }
                     }
                 }
+            }
+
+            void PacketIngress::pcapCallback(u_char* user, 
+                                            const struct pcap_pkthdr* header,
+                                            const u_char* packet)
+            {
+                auto* ingress = reinterpret_cast<PacketIngress*>(user);
                 
-                logger_->debug("Worker thread " + std::to_string(thread_id) + " stopped");
-            }
-
-            // ==================== Callback Registration ====================
-            
-            void PacketIngress::registerPacketCallback(PacketCallback callback)
-            {
-                std::lock_guard<std::mutex> lock(callback_mutex_);
-                packet_callback_ = callback;
-                logger_->info("Packet callback registered");
-            }
-
-            void PacketIngress::unregisterPacketCallback()
-            {
-                std::lock_guard<std::mutex> lock(callback_mutex_);
-                packet_callback_ = nullptr;
-                logger_->info("Packet callback unregistered");
-            }
-
-            // ==================== Statistics ====================
-            
-            IngressStats PacketIngress::getStatistics() const
-            {
-                std::lock_guard<std::mutex> lock(stats_mutex_);
-                return stats_;
-            }
-
-            void PacketIngress::resetStatistics()
-            {
-                std::lock_guard<std::mutex> lock(stats_mutex_);
-                stats_ = IngressStats();
-                stats_.last_update_time = Common::Utils::getCurrentTimestampMs();
-                logger_->info("Statistics reset");
-            }
-
-            void PacketIngress::updateStatistics()
-            {
-                std::lock_guard<std::mutex> lock(stats_mutex_);
-                calculateStatistics();
-            }
-
-            void PacketIngress::calculateStatistics()
-            {
-                uint64_t current_time = Common::Utils::getCurrentTimestampMs();
-                uint64_t time_diff = current_time - stats_.last_update_time;
-                
-                if (time_diff > 0)
+                if (!ingress->is_capturing_.load())
                 {
-                    double time_diff_sec = time_diff / 1000.0;
+                    return;
+                }
+                
+                // Update statistics
+                ingress->stats_.total_packets.fetch_add(1);
+                ingress->stats_.total_bytes.fetch_add(header->caplen);
+                
+                // Add packet to queue
+                PacketData packet_data;
+                packet_data.data.assign(packet, packet + header->caplen);
+                packet_data.length = header->caplen;
+                packet_data.timestamp = std::chrono::steady_clock::now();
+                
+                {
+                    std::lock_guard<std::mutex> lock(ingress->queue_mutex_);
                     
-                    stats_.packets_per_second = stats_.total_packets_received / time_diff_sec;
-                    stats_.bytes_per_second = stats_.total_bytes_received / time_diff_sec;
+                    // Check queue size limit
+                    if (ingress->packet_queue_.size() >= 
+                        static_cast<size_t>(ingress->config_.buffer_size))
+                    {
+                        ingress->stats_.dropped_packets.fetch_add(1);
+                        return;
+                    }
+                    
+                    ingress->packet_queue_.push(std::move(packet_data));
                 }
                 
-                if (stats_.total_packets_received > 0)
-                {
-                    stats_.avg_packet_size = static_cast<double>(stats_.total_bytes_received) / stats_.total_packets_received;
-                }
-                
-                stats_.last_update_time = current_time;
+                ingress->queue_cv_.notify_one();
             }
 
-            void PacketIngress::printStatistics() const
+            void PacketIngress::updatePerformanceMetrics()
             {
-                IngressStats stats = getStatistics();
+                auto now = std::chrono::steady_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::seconds>(
+                    now - stats_.last_update);
                 
-                logger_->info("========== Packet Ingress Statistics ==========");
-                logger_->info("Total Packets Received:  " + std::to_string(stats.total_packets_received));
-                logger_->info("Total Bytes Received:    " + std::to_string(stats.total_bytes_received));
-                logger_->info("Packets Dropped:         " + std::to_string(stats.packets_dropped));
-                logger_->info("Packets Queued:          " + std::to_string(stats.packets_queued));
-                logger_->info("Packets Processed:       " + std::to_string(stats.packets_processed));
-                logger_->info("Queue Full Drops:        " + std::to_string(stats.queue_full_drops));
-                logger_->info("Parse Errors:            " + std::to_string(stats.parse_errors));
-                logger_->info("Packets/sec:             " + std::to_string(stats.packets_per_second));
-                logger_->info("Bytes/sec:               " + std::to_string(stats.bytes_per_second));
-                logger_->info("Avg Packet Size:         " + std::to_string(stats.avg_packet_size) + " bytes");
-                logger_->info("Current Queue Size:      " + std::to_string(getQueueSize()));
-                logger_->info("===============================================");
+                if (duration.count() >= 1)
+                {
+                    // Calculate packets per second
+                    uint64_t current_packets = stats_.total_packets.load();
+                    uint64_t current_bytes = stats_.total_bytes.load();
+                    
+                    static uint64_t last_packets = 0;
+                    static uint64_t last_bytes = 0;
+                    
+                    stats_.packets_per_second = current_packets - last_packets;
+                    stats_.bytes_per_second = current_bytes - last_bytes;
+                    
+                    last_packets = current_packets;
+                    last_bytes = current_bytes;
+                    
+                    stats_.last_update = now;
+                }
             }
 
-            // ==================== Configuration ====================
-            
-            void PacketIngress::setConfig(const IngressConfig &config)
+            void PacketIngress::metricsUpdateThread()
             {
-                config_ = config;
-            }
-
-            IngressConfig PacketIngress::getConfig() const
-            {
-                return config_;
-            }
-
-            bool PacketIngress::validateConfig() const
-            {
-                if (config_.interface_name.empty())
+                while (is_capturing_.load())
                 {
-                    logger_->error("Interface name is empty");
-                    return false;
+                    updatePerformanceMetrics();
+                    std::this_thread::sleep_for(std::chrono::seconds(1));
                 }
-                
-                if (config_.snaplen <= 0)
-                {
-                    logger_->error("Invalid snaplen: " + std::to_string(config_.snaplen));
-                    return false;
-                }
-                
-                if (config_.timeout_ms < 0)
-                {
-                    logger_->error("Invalid timeout: " + std::to_string(config_.timeout_ms));
-                    return false;
-                }
-                
-                if (config_.packet_queue_size == 0)
-                {
-                    logger_->error("Invalid queue size: " + std::to_string(config_.packet_queue_size));
-                    return false;
-                }
-                
-                if (config_.worker_threads <= 0)
-                {
-                    logger_->error("Invalid worker threads: " + std::to_string(config_.worker_threads));
-                    return false;
-                }
-                
-                return true;
-            }
-
-            // ==================== XDP Filter Integration ====================
-            
-            void PacketIngress::setXDPFilter(std::shared_ptr<XDPFilter> xdp_filter)
-            {
-                xdp_filter_ = xdp_filter;
-                logger_->info("XDP filter set");
-            }
-
-            std::shared_ptr<XDPFilter> PacketIngress::getXDPFilter() const
-            {
-                return xdp_filter_;
             }
 
         } // namespace Layer1
-    }     // namespace Core
+    } // namespace Core
 } // namespace NetworkSecurity

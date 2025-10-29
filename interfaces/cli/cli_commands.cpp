@@ -1,4 +1,4 @@
-// src/interfaces/cli/cli_commands.cpp
+// interfaces/cli/cli_commands.cpp
 #include "cli_commands.hpp"
 #include "../../src/common/logger.hpp"
 #include "../../src/common/network_utils.hpp" 

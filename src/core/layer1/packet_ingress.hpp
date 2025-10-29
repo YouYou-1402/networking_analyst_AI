@@ -2,287 +2,327 @@
 #ifndef NETWORK_SECURITY_PACKET_INGRESS_HPP
 #define NETWORK_SECURITY_PACKET_INGRESS_HPP
 
+#include "../../common/packet_parser.hpp"
+#include "../../common/utils.hpp"
+#include "../../common/logger.hpp"
 #include <string>
 #include <vector>
 #include <memory>
 #include <atomic>
 #include <mutex>
 #include <thread>
-#include <queue>
 #include <functional>
+#include <queue>
 #include <condition_variable>
-#include <cstring>
-
-// Include pcap FIRST to avoid BPF conflicts
 #include <pcap.h>
 
-#include "../../common/logger.hpp"
-#include "../../common/config_manager.hpp"
-#include "../../common/packet_parser.hpp"
-
-// Forward declaration to avoid including xdp_filter.hpp here
 namespace NetworkSecurity
 {
     namespace Core
     {
         namespace Layer1
         {
-            class XDPFilter;
-        }
-    }
-}
-
-namespace NetworkSecurity
-{
-    namespace Core
-    {
-        namespace Layer1
-        {
-            // ... (rest of the header remains the same as before)
-            
-            struct PacketBuffer
+            /**
+             * @brief Cấu hình cho PacketIngress
+             */
+            struct PacketIngressConfig
             {
-                uint8_t *data;
-                size_t length;
-                uint64_t timestamp;
-                uint32_t interface_index;
-                std::string interface_name;
+                std::string interface;              // Tên interface (eth0, wlan0, ...)
+                std::string filter;                 // BPF filter
+                int snaplen;                        // Snapshot length
+                int timeout_ms;                     // Timeout in milliseconds
+                bool promiscuous;                   // Promiscuous mode
+                int buffer_size;                    // Buffer size
+                int num_threads;                    // Number of processing threads
+                bool use_xdp;                       // Use XDP/eBPF acceleration
                 
-                PacketBuffer()
-                    : data(nullptr), length(0), timestamp(0), interface_index(0)
-                {
-                }
-                
-                ~PacketBuffer()
-                {
-                    if (data)
-                    {
-                        delete[] data;
-                        data = nullptr;
-                    }
-                }
-                
-                PacketBuffer(const PacketBuffer &other)
-                    : length(other.length),
-                      timestamp(other.timestamp),
-                      interface_index(other.interface_index),
-                      interface_name(other.interface_name)
-                {
-                    if (other.data && other.length > 0)
-                    {
-                        data = new uint8_t[other.length];
-                        std::memcpy(data, other.data, other.length);
-                    }
-                    else
-                    {
-                        data = nullptr;
-                    }
-                }
-                
-                PacketBuffer(PacketBuffer &&other) noexcept
-                    : data(other.data),
-                      length(other.length),
-                      timestamp(other.timestamp),
-                      interface_index(other.interface_index),
-                      interface_name(std::move(other.interface_name))
-                {
-                    other.data = nullptr;
-                    other.length = 0;
-                }
-                
-                PacketBuffer &operator=(const PacketBuffer &other)
-                {
-                    if (this != &other)
-                    {
-                        if (data)
-                        {
-                            delete[] data;
-                        }
-                        
-                        length = other.length;
-                        timestamp = other.timestamp;
-                        interface_index = other.interface_index;
-                        interface_name = other.interface_name;
-                        
-                        if (other.data && other.length > 0)
-                        {
-                            data = new uint8_t[other.length];
-                            std::memcpy(data, other.data, other.length);
-                        }
-                        else
-                        {
-                            data = nullptr;
-                        }
-                    }
-                    return *this;
-                }
-                
-                PacketBuffer &operator=(PacketBuffer &&other) noexcept
-                {
-                    if (this != &other)
-                    {
-                        if (data)
-                        {
-                            delete[] data;
-                        }
-                        
-                        data = other.data;
-                        length = other.length;
-                        timestamp = other.timestamp;
-                        interface_index = other.interface_index;
-                        interface_name = std::move(other.interface_name);
-                        
-                        other.data = nullptr;
-                        other.length = 0;
-                    }
-                    return *this;
-                }
-            };
-
-            struct IngressStats
-            {
-                uint64_t total_packets_received;
-                uint64_t total_bytes_received;
-                uint64_t packets_dropped;
-                uint64_t packets_queued;
-                uint64_t packets_processed;
-                uint64_t queue_full_drops;
-                uint64_t parse_errors;
-                
-                double packets_per_second;
-                double bytes_per_second;
-                double avg_packet_size;
-                
-                uint64_t last_update_time;
-                
-                IngressStats()
-                    : total_packets_received(0),
-                      total_bytes_received(0),
-                      packets_dropped(0),
-                      packets_queued(0),
-                      packets_processed(0),
-                      queue_full_drops(0),
-                      parse_errors(0),
-                      packets_per_second(0.0),
-                      bytes_per_second(0.0),
-                      avg_packet_size(0.0),
-                      last_update_time(0)
-                {
-                }
-            };
-
-            struct IngressConfig
-            {
-                std::string interface_name;
-                std::string capture_filter;
-                int snaplen;
-                int timeout_ms;
-                int buffer_size;
-                bool promiscuous_mode;
-                bool enable_xdp_filter;
-                size_t packet_queue_size;
-                int worker_threads;
-                bool enable_zero_copy;
-                
-                IngressConfig()
-                    : interface_name("eth0"),
-                      capture_filter(""),
+                PacketIngressConfig()
+                    : interface("any"),
+                      filter(""),
                       snaplen(65535),
                       timeout_ms(1000),
-                      buffer_size(64 * 1024 * 1024),
-                      promiscuous_mode(true),
-                      enable_xdp_filter(true),
-                      packet_queue_size(10000),
-                      worker_threads(4),
-                      enable_zero_copy(false)
+                      promiscuous(true),
+                      buffer_size(10000),
+                      num_threads(4),
+                      use_xdp(false)
+                {}
+            };
+
+            /**
+             * @brief Thống kê packet
+             */
+            struct PacketStatistics
+            {
+                std::atomic<uint64_t> total_packets{0};
+                std::atomic<uint64_t> total_bytes{0};
+                std::atomic<uint64_t> dropped_packets{0};
+                std::atomic<uint64_t> filtered_packets{0};
+                std::atomic<uint64_t> error_packets{0};
+                
+                // Protocol statistics
+                std::atomic<uint64_t> tcp_packets{0};
+                std::atomic<uint64_t> udp_packets{0};
+                std::atomic<uint64_t> icmp_packets{0};
+                std::atomic<uint64_t> other_packets{0};
+                
+                // Performance metrics
+                std::atomic<uint64_t> packets_per_second{0};
+                std::atomic<uint64_t> bytes_per_second{0};
+                
+                std::chrono::steady_clock::time_point start_time;
+                std::chrono::steady_clock::time_point last_update;
+                
+                PacketStatistics()
                 {
+                    start_time = std::chrono::steady_clock::now();
+                    last_update = start_time;
+                }
+                
+                // Delete copy constructor and assignment operator
+                PacketStatistics(const PacketStatistics&) = delete;
+                PacketStatistics& operator=(const PacketStatistics&) = delete;
+                
+                // Default move constructor and assignment operator
+                PacketStatistics(PacketStatistics&&) = default;
+                PacketStatistics& operator=(PacketStatistics&&) = default;
+                
+                void reset()
+                {
+                    total_packets = 0;
+                    total_bytes = 0;
+                    dropped_packets = 0;
+                    filtered_packets = 0;
+                    error_packets = 0;
+                    tcp_packets = 0;
+                    udp_packets = 0;
+                    icmp_packets = 0;
+                    other_packets = 0;
+                    packets_per_second = 0;
+                    bytes_per_second = 0;
+                    start_time = std::chrono::steady_clock::now();
+                    last_update = start_time;
+                }
+                
+                // Helper method to get snapshot of statistics
+                struct Snapshot
+                {
+                    uint64_t total_packets;
+                    uint64_t total_bytes;
+                    uint64_t dropped_packets;
+                    uint64_t filtered_packets;
+                    uint64_t error_packets;
+                    uint64_t tcp_packets;
+                    uint64_t udp_packets;
+                    uint64_t icmp_packets;
+                    uint64_t other_packets;
+                    uint64_t packets_per_second;
+                    uint64_t bytes_per_second;
+                    std::chrono::steady_clock::time_point start_time;
+                    std::chrono::steady_clock::time_point last_update;
+                };
+                
+                Snapshot getSnapshot() const
+                {
+                    Snapshot snap;
+                    snap.total_packets = total_packets.load();
+                    snap.total_bytes = total_bytes.load();
+                    snap.dropped_packets = dropped_packets.load();
+                    snap.filtered_packets = filtered_packets.load();
+                    snap.error_packets = error_packets.load();
+                    snap.tcp_packets = tcp_packets.load();
+                    snap.udp_packets = udp_packets.load();
+                    snap.icmp_packets = icmp_packets.load();
+                    snap.other_packets = other_packets.load();
+                    snap.packets_per_second = packets_per_second.load();
+                    snap.bytes_per_second = bytes_per_second.load();
+                    snap.start_time = start_time;
+                    snap.last_update = last_update;
+                    return snap;
                 }
             };
 
-            using PacketCallback = std::function<void(const PacketBuffer &packet)>;
+            /**
+             * @brief Callback function type for packet processing
+             */
+            using PacketCallback = std::function<void(const Common::ParsedPacket&, 
+                                                     const uint8_t*, 
+                                                     size_t)>;
 
+            /**
+             * @brief Lớp quản lý thu thập packet từ network interface
+             */
             class PacketIngress
             {
             public:
                 PacketIngress();
                 ~PacketIngress();
 
-                bool initialize(const IngressConfig &config);
-                bool start();
-                void stop();
-                void shutdown();
+                // Prevent copy
+                PacketIngress(const PacketIngress&) = delete;
+                PacketIngress& operator=(const PacketIngress&) = delete;
 
-                bool openInterface();
-                bool closeInterface();
-                bool setFilter(const std::string &filter_expression);
+                // ==================== Initialization ====================
                 
-                void captureLoop();
-                void processingLoop();
+                /**
+                 * @brief Khởi tạo với cấu hình
+                 */
+                bool initialize(const PacketIngressConfig& config);
+                
+                /**
+                 * @brief Dọn dẹp tài nguyên
+                 */
+                void cleanup();
 
-                void registerPacketCallback(PacketCallback callback);
-                void unregisterPacketCallback();
+                // ==================== Capture Control ====================
+                
+                /**
+                 * @brief Bắt đầu capture packets
+                 */
+                bool startCapture();
+                
+                /**
+                 * @brief Dừng capture packets
+                 */
+                void stopCapture();
+                
+                /**
+                 * @brief Kiểm tra trạng thái capture
+                 */
+                bool isCapturing() const { return is_capturing_.load(); }
 
-                bool enqueuePacket(PacketBuffer &&packet);
-                bool dequeuePacket(PacketBuffer &packet);
-                size_t getQueueSize() const;
-                bool isQueueFull() const;
+                // ==================== Callback Registration ====================
+                
+                /**
+                 * @brief Đăng ký callback xử lý packet
+                 */
+                void registerCallback(const std::string& name, PacketCallback callback);
+                
+                /**
+                 * @brief Hủy đăng ký callback
+                 */
+                void unregisterCallback(const std::string& name);
+                
+                /**
+                 * @brief Xóa tất cả callbacks
+                 */
+                void clearCallbacks();
 
-                IngressStats getStatistics() const;
+                // ==================== Statistics ====================
+                
+                /**
+                 * @brief Lấy snapshot thống kê
+                 */
+                PacketStatistics::Snapshot getStatistics() const;
+                
+                /**
+                 * @brief Reset thống kê
+                 */
                 void resetStatistics();
-                void updateStatistics();
+                
+                /**
+                 * @brief In thống kê ra console
+                 */
                 void printStatistics() const;
 
-                void setConfig(const IngressConfig &config);
-                IngressConfig getConfig() const;
-
-                bool isRunning() const { return is_running_; }
-                bool isCapturing() const { return is_capturing_; }
-                std::string getInterfaceName() const { return config_.interface_name; }
-
-                void setXDPFilter(std::shared_ptr<XDPFilter> xdp_filter);
-                std::shared_ptr<XDPFilter> getXDPFilter() const;
+                // ==================== Configuration ====================
+                
+                /**
+                 * @brief Cập nhật BPF filter
+                 */
+                bool updateFilter(const std::string& filter);
+                
+                /**
+                 * @brief Lấy danh sách interfaces có sẵn
+                 */
+                static std::vector<std::string> getAvailableInterfaces();
+                
+                /**
+                 * @brief Kiểm tra interface có tồn tại không
+                 */
+                static bool isInterfaceAvailable(const std::string& interface);
 
             private:
-                static void pcapCallbackStatic(u_char *user, const struct pcap_pkthdr *header, const u_char *packet);
-                void pcapCallback(const struct pcap_pkthdr *header, const u_char *packet);
+                // ==================== Internal Methods ====================
                 
-                void startWorkerThreads();
-                void stopWorkerThreads();
-                void workerThread(int thread_id);
+                /**
+                 * @brief Thread chính để capture packets
+                 */
+                void captureThread();
+                
+                /**
+                 * @brief Thread xử lý packets từ queue
+                 */
+                void processingThread();
+                
+                /**
+                 * @brief Xử lý một packet
+                 */
+                void processPacket(const uint8_t* packet_data, size_t packet_len);
+                
+                /**
+                 * @brief Callback từ libpcap
+                 */
+                static void pcapCallback(u_char* user, 
+                                        const struct pcap_pkthdr* header,
+                                        const u_char* packet);
+                
+                /**
+                 * @brief Cập nhật thống kê hiệu suất
+                 */
+                void updatePerformanceMetrics();
+                
+                /**
+                 * @brief Thread cập nhật metrics định kỳ
+                 */
+                void metricsUpdateThread();
 
-                bool validateConfig() const;
-                void calculateStatistics();
-
-                IngressConfig config_;
+                // ==================== Member Variables ====================
                 
-                pcap_t *pcap_handle_;
-                char pcap_errbuf_[PCAP_ERRBUF_SIZE];
+                // Configuration
+                PacketIngressConfig config_;
                 
-                std::queue<PacketBuffer> packet_queue_;
-                mutable std::mutex queue_mutex_;
-                std::condition_variable queue_cv_;
+                // PCAP handle
+                pcap_t* pcap_handle_;
                 
-                std::vector<std::thread> worker_threads_;
-                std::thread capture_thread_;
+                // Packet parser
+                Common::PacketParser parser_;
                 
-                PacketCallback packet_callback_;
-                std::mutex callback_mutex_;
+                // Logger
+                std::shared_ptr<Common::Logger> logger_;
                 
-                mutable IngressStats stats_;
-                mutable std::mutex stats_mutex_;
-                
+                // Threading
                 std::atomic<bool> is_running_;
                 std::atomic<bool> is_capturing_;
-                std::atomic<bool> stop_requested_;
+                std::thread capture_thread_;
+                std::vector<std::thread> processing_threads_;
+                std::thread metrics_thread_;
                 
-                std::shared_ptr<XDPFilter> xdp_filter_;
+                // Packet queue
+                struct PacketData
+                {
+                    std::vector<uint8_t> data;
+                    size_t length;
+                    std::chrono::steady_clock::time_point timestamp;
+                };
+                std::queue<PacketData> packet_queue_;
+                std::mutex queue_mutex_;
+                std::condition_variable queue_cv_;
                 
-                std::shared_ptr<Common::Logger> logger_;
-                std::unique_ptr<Common::PacketParser> packet_parser_;
+                // Callbacks
+                std::unordered_map<std::string, PacketCallback> callbacks_;
+                std::shared_mutex callbacks_mutex_;
+                
+                // Statistics
+                PacketStatistics stats_;
+                mutable std::mutex stats_mutex_;
+                
+                // Error handling
+                std::string last_error_;
+                std::mutex error_mutex_;
             };
 
         } // namespace Layer1
-    }     // namespace Core
+    } // namespace Core
 } // namespace NetworkSecurity
 
 #endif // NETWORK_SECURITY_PACKET_INGRESS_HPP

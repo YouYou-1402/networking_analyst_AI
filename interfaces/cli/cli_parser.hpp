@@ -1,4 +1,4 @@
-// src/interfaces/cli/cli_parser.hpp
+// interfaces/cli/cli_parser.hpp
 #ifndef NETWORK_SECURITY_CLI_PARSER_HPP
 #define NETWORK_SECURITY_CLI_PARSER_HPP
 
