@@ -1,175 +1,267 @@
 // src/core/layer1/packet_ingress.hpp
-#ifndef NETWORK_SECURITY_LAYER1_PACKET_INGRESS_HPP
-#define NETWORK_SECURITY_LAYER1_PACKET_INGRESS_HPP
+#ifndef PACKET_INGRESS_HPP
+#define PACKET_INGRESS_HPP
 
-#include <pcap.h>
 #include <string>
+#include <vector>
+#include <memory>
+#include <atomic>
 #include <functional>
 #include <thread>
-#include <atomic>
-#include <memory>
-#include <vector>
-#include <queue>
-#include <mutex>
-#include <condition_variable>
-#include "../../common/logger.hpp"
+#include <pcap.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <linux/if_packet.h>
+#include "../../common/packet_parser.hpp"
 
-namespace NetworkSecurity {
-namespace Layer1 {
+namespace NetworkSecurity
+{
+    namespace Layer1
+    {
+        /**
+         * @brief Cấu trúc cấu hình cho Packet Ingress
+         */
+        struct IngressConfig
+        {
+            std::string interface;      // Tên interface (eth0, wlan0, ...)
+            int snaplen;                // Snapshot length (bytes to capture)
+            int buffer_size;            // Kernel buffer size (MB)
+            int timeout_ms;             // Read timeout (milliseconds)
+            bool promiscuous;           // Promiscuous mode
+            bool enable_timestamp;      // Hardware timestamping
+            std::string bpf_filter;     // Berkeley Packet Filter (optional)
 
-// ============ Structures ============
+            // Default values
+            IngressConfig()
+                : interface("wlan0"),
+                  snaplen(65535),
+                  buffer_size(256),
+                  timeout_ms(1000),
+                  promiscuous(true),
+                  enable_timestamp(true),
+                  bpf_filter("") {}
+        };
 
-struct CaptureStats {
-    uint64_t packets_received{0};
-    uint64_t packets_dropped{0};
-    uint64_t bytes_received{0};
-    double capture_rate{0.0};
-    double processing_rate{0.0};
-    uint64_t queue_size{0};
-    uint64_t queue_drops{0};
-};
+        /**
+         * @brief Statistics của Packet Ingress
+         */
+        struct IngressStats
+        {
+            uint64_t packets_received;   // Tổng số gói nhận được
+            uint64_t packets_dropped;    // Gói bị drop bởi kernel
+            uint64_t bytes_received;     // Tổng bytes nhận được
+            uint64_t errors;             // Số lỗi
+            double capture_rate;         // Packets/second
+            uint64_t start_time;         // Thời gian bắt đầu
+            uint64_t last_packet_time;   // Thời gian gói cuối
 
-struct PacketData {
-    std::vector<uint8_t> data;
-    uint64_t timestamp;
-    uint32_t original_length;
-    
-    PacketData() = default;
-    PacketData(const uint8_t* pkt_data, size_t len, uint64_t ts, uint32_t orig_len)
-        : data(pkt_data, pkt_data + len), 
-          timestamp(ts),
-          original_length(orig_len) {}
-};
+            IngressStats()
+                : packets_received(0), packets_dropped(0),
+                  bytes_received(0), errors(0), capture_rate(0.0),
+                  start_time(0), last_packet_time(0) {}
+        };
 
-// ============ Callback Types ============
+        /**
+         * @brief Callback function type cho packet processing
+         * Sử dụng ParsedPacket từ packet_parser.hpp
+         */
+        using PacketCallback = std::function<void(const Common::ParsedPacket &)>;
 
-using PacketCallback = std::function<void(const uint8_t*, size_t, uint64_t)>;
-using PacketCallbackV2 = std::function<void(const PacketData&)>;
+        /**
+         * @class PacketIngress
+         * @brief Lớp chính để bắt gói tin từ network interface
+         */
+        class PacketIngress
+        {
+        public:
+            /**
+             * @brief Constructor
+             * @param config Cấu hình ingress
+             */
+            explicit PacketIngress(const IngressConfig &config);
 
-// ============ Configuration ============
+            /**
+             * @brief Destructor
+             */
+            ~PacketIngress();
 
-struct CaptureConfig {
-    std::string interface{"any"};
-    std::string filter{};
-    int snaplen{65535};
-    int buffer_size{64 * 1024 * 1024};  // 64MB
-    int timeout_ms{1000};
-    bool promiscuous_mode{true};
-    
-    // Queue configuration
-    size_t queue_capacity{10000};
-    bool enable_queue{false};  // Nếu true, dùng queue + worker threads
-    int worker_threads{2};
-    
-    // Performance tuning
-    bool enable_zero_copy{false};  // Experimental
-    int batch_size{-1};  // -1 = unlimited
-};
+            // Disable copy
+            PacketIngress(const PacketIngress &) = delete;
+            PacketIngress &operator=(const PacketIngress &) = delete;
 
-// ============ Main Class ============
+            /**
+             * @brief Khởi tạo và mở interface
+             * @return true nếu thành công
+             */
+            bool initialize();
 
-class PacketIngress {
-public:
-    PacketIngress();
-    explicit PacketIngress(const CaptureConfig& config);
-    ~PacketIngress();
+            /**
+             * @brief Bắt đầu capture packets
+             * @param callback Function được gọi cho mỗi packet
+             * @return true nếu thành công
+             */
+            bool start(PacketCallback callback);
 
-    // Disable copy
-    PacketIngress(const PacketIngress&) = delete;
-    PacketIngress& operator=(const PacketIngress&) = delete;
+            /**
+             * @brief Dừng capture
+             */
+            void stop();
 
-    // ============ Initialization ============
-    bool initialize(const CaptureConfig& config);
-    bool initialize(const std::string& interface, 
-                   const std::string& filter = "",
-                   int snaplen = 65535,
-                   int buffer_size = 64*1024*1024);
+            /**
+             * @brief Kiểm tra trạng thái running
+             * @return true nếu đang chạy
+             */
+            bool isRunning() const { return running_.load(); }
 
-    // ============ Control ============
-    bool start();
-    void stop();
-    bool isRunning() const { return is_running_.load(); }
+            /**
+             * @brief Lấy statistics
+             * @return IngressStats
+             */
+            IngressStats getStats() const;
 
-    // ============ Callbacks ============
-    void registerCallback(PacketCallback callback);
-    void registerCallbackV2(PacketCallbackV2 callback);
+            /**
+             * @brief Reset statistics
+             */
+            void resetStats();
 
-    // ============ Statistics ============
-    CaptureStats getStats() const;
-    void resetStats();
-    
-    // ============ Configuration ============
-    void setPromiscuousMode(bool enable);
-    void setTimeout(int timeout_ms);
-    void setQueueCapacity(size_t capacity);
-    
-    // ============ Utility ============
-    static std::vector<std::string> listInterfaces();
-    std::string getLastError() const { return last_error_; }
+            /**
+             * @brief Lấy tên interface
+             */
+            std::string getInterface() const { return config_.interface; }
 
-private:
-    // ============ Capture Thread ============
-    void captureLoop();
-    static void packetHandler(u_char* user, const struct pcap_pkthdr* header, 
-                             const u_char* packet);
-    
-    // ============ Worker Threads (Queue Mode) ============
-    void workerLoop(int worker_id);
-    bool enqueuePacket(PacketData&& packet);
-    
-    // ============ Statistics Update ============
-    void updateCaptureRate();
-    void updateProcessingRate();
-    
-    // ============ Cleanup ============
-    void cleanup();
+            /**
+             * @brief Kiểm tra interface có tồn tại không
+             * @param interface Tên interface
+             * @return true nếu tồn tại
+             */
+            static bool isInterfaceValid(const std::string &interface);
 
-private:
-    // ============ PCAP Handle ============
-    pcap_t* pcap_handle_;
-    
-    // ============ Configuration ============
-    CaptureConfig config_;
-    std::string last_error_;
-    
-    // ============ State ============
-    std::atomic<bool> is_running_;
-    std::atomic<bool> stop_requested_;
-    
-    // ============ Threads ============
-    std::thread capture_thread_;
-    std::vector<std::thread> worker_threads_;
-    
-    // ============ Callbacks ============
-    PacketCallback callback_;
-    PacketCallbackV2 callback_v2_;
-    
-    // ============ Packet Queue (Optional) ============
-    std::queue<PacketData> packet_queue_;
-    std::mutex queue_mutex_;
-    std::condition_variable queue_cv_;
-    std::atomic<size_t> queue_size_;
-    
-    // ============ Statistics (Atomic) ============
-    std::atomic<uint64_t> packets_received_;
-    std::atomic<uint64_t> packets_dropped_;
-    std::atomic<uint64_t> bytes_received_;
-    std::atomic<uint64_t> packets_processed_;
-    std::atomic<uint64_t> queue_drops_;
-    
-    std::atomic<double> capture_rate_;
-    std::atomic<double> processing_rate_;
-    
-    // ============ Rate Calculation ============
-    std::chrono::steady_clock::time_point last_stats_time_;
-    uint64_t last_packet_count_;
-    uint64_t last_processed_count_;
-    
-    // ============ Logger ============
-    Common::Logger logger_;
-};
+            /**
+             * @brief Liệt kê tất cả interfaces có sẵn
+             * @return Vector các tên interface
+             */
+            static std::vector<std::string> listInterfaces();
 
-} // namespace Layer1
+            /**
+             * @brief Kiểm tra quyền root/CAP_NET_RAW
+             * @return true nếu có quyền
+             */
+            static bool checkPermissions();
+
+        private:
+            /**
+             * @brief Thiết lập promiscuous mode
+             * @return true nếu thành công
+             */
+            bool setPromiscuousMode();
+
+            /**
+             * @brief Thiết lập BPF filter
+             * @return true nếu thành công
+             */
+            bool setBPFFilter();
+
+            /**
+             * @brief Thiết lập buffer size
+             * @return true nếu thành công
+             */
+            bool setBufferSize();
+
+            /**
+             * @brief Thiết lập hardware timestamping
+             * @return true nếu thành công
+             */
+            bool setHardwareTimestamp();
+
+            /**
+             * @brief Callback từ libpcap
+             */
+            static void pcapCallback(u_char *user, const struct pcap_pkthdr *header,
+                                     const u_char *packet);
+
+            /**
+             * @brief Xử lý packet - parse và gọi user callback
+             */
+            void processPacket(const struct pcap_pkthdr *header, const u_char *packet);
+
+            /**
+             * @brief Cập nhật statistics
+             */
+            void updateStats();
+
+            /**
+             * @brief Thread function cho capture loop
+             */
+            void captureLoop();
+
+        private:
+            IngressConfig config_;              // Cấu hình
+            pcap_t *pcap_handle_;              // PCAP handle
+            std::atomic<bool> running_;        // Trạng thái running
+            std::atomic<bool> initialized_;    // Trạng thái initialized
+            PacketCallback callback_;          // User callback
+            std::unique_ptr<std::thread> capture_thread_; // Capture thread
+
+            // Parser
+            std::unique_ptr<Common::PacketParser> parser_;
+
+            // Statistics
+            mutable std::atomic<uint64_t> packets_received_;
+            mutable std::atomic<uint64_t> bytes_received_;
+            mutable std::atomic<uint64_t> errors_;
+            mutable std::atomic<uint64_t> start_time_;
+            mutable std::atomic<uint64_t> last_packet_time_;
+        };
+
+        /**
+         * @class IngressManager
+         * @brief Quản lý nhiều interfaces
+         */
+        class IngressManager
+        {
+        public:
+            IngressManager() = default;
+            ~IngressManager();
+
+            /**
+             * @brief Thêm interface để monitor
+             * @param config Cấu hình interface
+             * @return true nếu thành công
+             */
+            bool addInterface(const IngressConfig &config);
+
+            /**
+             * @brief Bắt đầu capture trên tất cả interfaces
+             * @param callback Packet callback
+             * @return true nếu thành công
+             */
+            bool startAll(PacketCallback callback);
+
+            /**
+             * @brief Dừng tất cả captures
+             */
+            void stopAll();
+
+            /**
+             * @brief Lấy tổng statistics
+             */
+            IngressStats getTotalStats() const;
+
+            /**
+             * @brief Lấy số interfaces đang hoạt động
+             */
+            size_t getActiveCount() const;
+
+            /**
+             * @brief Lấy danh sách interfaces đang monitor
+             */
+            std::vector<std::string> getActiveInterfaces() const;
+
+        private:
+            std::vector<std::unique_ptr<PacketIngress>> ingressors_;
+        };
+
+    } // namespace Layer1
 } // namespace NetworkSecurity
 
-#endif // NETWORK_SECURITY_LAYER1_PACKET_INGRESS_HPP
+#endif // PACKET_INGRESS_HPP
