@@ -35,7 +35,7 @@ namespace NetworkSecurity
             IngressConfig()
                 : interface("wlan0"),
                   snaplen(65535),
-                  buffer_size(256),
+                  buffer_size(16),
                   timeout_ms(1000),
                   promiscuous(true),
                   enable_timestamp(true),

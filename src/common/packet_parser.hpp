@@ -463,6 +463,35 @@ namespace NetworkSecurity
              */
             static std::string getPacketSummary(const ParsedPacket &packet);
 
+                    /**
+         * @brief Struct đơn giản hóa để lưu database
+         */
+        struct PacketInfo
+        {
+            uint64_t timestamp;          // Milliseconds since epoch
+            std::string src_mac;
+            std::string dst_mac;
+            std::string src_ip;
+            std::string dst_ip;
+            uint16_t src_port;
+            uint16_t dst_port;
+            std::string protocol;        // "TCP", "UDP", "ICMP", etc.
+            uint32_t length;
+            std::string flags;           // TCP flags (SYN, ACK, etc.)
+            uint32_t payload_size;
+            uint8_t ttl;
+            std::string checksum;
+
+            PacketInfo()
+                : timestamp(0), src_port(0), dst_port(0),
+                  length(0), payload_size(0), ttl(0) {}
+
+            /**
+             * @brief Tạo PacketInfo từ ParsedPacket
+             */
+            static PacketInfo fromParsedPacket(const ParsedPacket& parsed);
+        };
+
         private:
             // Validation functions
             bool validateEthernet(const struct ethhdr *eth_header, size_t length);
@@ -477,7 +506,7 @@ namespace NetworkSecurity
             void extractIPv4Flags(const struct iphdr *ip_header, IPv4Header &ipv4);
             void copyQuickAccessFields(ParsedPacket &parsed);
         };
-
+        
     } // namespace Common
 } // namespace NetworkSecurity
 

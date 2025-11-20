@@ -5,7 +5,7 @@
 #include <ctime>
 #include <algorithm>
 #include <sstream>
-
+#include <string.h>
 #ifdef __linux__
 #include <syslog.h>
 #include <sys/socket.h>
@@ -13,6 +13,28 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #endif
+#include <ctime>
+
+namespace {
+    std::string formatTimestampCorrectly(uint64_t timestamp_us) {
+        time_t seconds = static_cast<time_t>(timestamp_us / 1000000);
+        uint64_t microseconds = timestamp_us % 1000000;
+        
+        struct tm timeinfo;
+        #ifdef _WIN32
+            localtime_s(&timeinfo, &seconds);
+        #else
+            localtime_r(&seconds, &timeinfo);
+        #endif
+        
+        char buffer[64];
+        strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
+        snprintf(buffer + strlen(buffer), sizeof(buffer) - strlen(buffer), 
+                 ".%03lu", static_cast<unsigned long>(microseconds / 1000));
+        
+        return std::string(buffer);
+    }
+}
 
 namespace NetworkSecurity
 {
@@ -32,7 +54,7 @@ namespace NetworkSecurity
             size_t pos = result.find("{timestamp}");
             if (pos != std::string::npos)
             {
-                result.replace(pos, 11, Utils::formatTimestamp(entry.timestamp));
+                result.replace(pos, 11, formatTimestampCorrectly(entry.timestamp));
             }
             
             // Replace {level}
