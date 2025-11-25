@@ -57,12 +57,20 @@ namespace NetworkSecurity
             static std::string formatTimestamp(uint64_t timestamp, const std::string &format);
 
             /**
+             * @brief Format timestamp từ microseconds
+             * @param timestamp_us Timestamp tính bằng microseconds
+             * @return Chuỗi thời gian định dạng
+             */
+            static std::string formatTimestampUs(uint64_t timestamp_us);
+            static std::string formatTimestampUs(uint64_t timestamp_us, const std::string &format);
+            /**
              * @brief Tính khoảng thời gian giữa 2 timestamp
              * @param start_time Thời gian bắt đầu
              * @param end_time Thời gian kết thúc
              * @return Khoảng thời gian tính bằng milliseconds
              */
             static uint64_t timeDifference(uint64_t start_time, uint64_t end_time);
+
 
             // ==================== String utilities ====================
             /**

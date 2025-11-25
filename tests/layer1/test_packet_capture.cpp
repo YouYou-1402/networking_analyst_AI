@@ -114,7 +114,7 @@ void displayPacketCompact(const ParsedPacket& packet) {
     uint64_t count = g_packet_count.fetch_add(1) + 1;
     
     std::string protocol = PacketParser::getProtocolTypeName(packet.protocol_type);
-    std::string time_str = Utils::formatTimestamp(packet.timestamp);
+    std::string time_str = Utils::formatTimestampUs(packet.timestamp);
     std::string size_str = std::to_string(packet.packet_size);
     
     // Build connection string
@@ -182,7 +182,7 @@ void displayPacketDetailed(const ParsedPacket& packet) {
     
     std::cout << "\n";
     std::cout << "╔═══════════════════════════════════════════════════════════════════════════════════════════════════════╗\n";
-    std::cout << "║ Packet #" << count << " - " << Utils::formatTimestamp(packet.timestamp) << std::string(72 - std::to_string(count).length(), ' ') << "║\n";
+    std::cout << "║ Packet #" << count << " - " << Utils::formatTimestampUs(packet.timestamp) << std::string(72 - std::to_string(count).length(), ' ') << "║\n";
     std::cout << "╠═══════════════════════════════════════════════════════════════════════════════════════════════════════╣\n";
     
     // Ethernet

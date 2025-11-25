@@ -3,6 +3,7 @@
 #define PCAP_WRITER_HPP
 
 #include "../../common/packet_parser.hpp"
+#include "../../common/logger.hpp"
 #include <string>
 #include <atomic>
 #include <memory>
@@ -93,6 +94,9 @@ namespace NetworkSecurity
 
                 pcap_t *m_pcap_handle{nullptr};             // PCAP handle
                 pcap_dumper_t *m_pcap_dumper{nullptr};      // PCAP dumper
+
+                // Logger
+                std::shared_ptr<Common::Logger> m_logger;
 
                 // Flush counter
                 std::atomic<uint64_t> m_writes_since_flush{0};

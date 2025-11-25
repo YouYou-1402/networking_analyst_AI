@@ -83,6 +83,34 @@ namespace NetworkSecurity
             return ss.str();
         }
 
+        std::string Utils::formatTimestampUs(uint64_t timestamp_us)
+        {
+            time_t seconds = timestamp_us / 1000000;
+            uint64_t microseconds = timestamp_us % 1000000;
+            
+            struct tm timeinfo;
+            localtime_r(&seconds, &timeinfo);
+            
+            std::stringstream ss;
+            ss << std::put_time(&timeinfo, "%Y-%m-%d %H:%M:%S");
+            ss << '.' << std::setfill('0') << std::setw(6) << microseconds;
+            return ss.str();
+        }
+
+        std::string Utils::formatTimestampUs(uint64_t timestamp_us, const std::string &format)
+        {
+            time_t seconds = timestamp_us / 1000000;
+            
+            struct tm timeinfo;
+            localtime_r(&seconds, &timeinfo);
+            
+            std::stringstream ss;
+            ss << std::put_time(&timeinfo, format.c_str());
+            return ss.str();
+        }
+
+
+
         uint64_t Utils::timeDifference(uint64_t start_time, uint64_t end_time)
         {
             return (end_time > start_time) ? (end_time - start_time) : 0;

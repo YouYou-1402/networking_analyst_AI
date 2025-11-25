@@ -104,7 +104,7 @@ void displayPacketCompact(const ParsedPacket& packet, bool saved) {
     uint64_t count = g_packet_count.fetch_add(1) + 1;
     
     std::string protocol = PacketParser::getProtocolTypeName(packet.protocol_type);
-    std::string time_str = Utils::formatTimestamp(packet.timestamp);
+    std::string time_str = Utils::formatTimestampUs(packet.timestamp);
     std::string size_str = std::to_string(packet.packet_size);
     
     // Build connection string

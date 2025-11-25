@@ -634,13 +634,30 @@ namespace NetworkSecurity
 #define LOG_MANAGER NetworkSecurity::Common::LoggerManager::getInstance()
 
 // Logging macros with file/line info
-#define LOG_TRACE(logger, msg) logger->trace(msg, __FILE__, __FUNCTION__, __LINE__)
-#define LOG_DEBUG(logger, msg) logger->debug(msg, __FILE__, __FUNCTION__, __LINE__)
-#define LOG_INFO(logger, msg) logger->info(msg, __FILE__, __FUNCTION__, __LINE__)
-#define LOG_WARN(logger, msg) logger->warn(msg, __FILE__, __FUNCTION__, __LINE__)
-#define LOG_ERROR(logger, msg) logger->error(msg, __FILE__, __FUNCTION__, __LINE__)
-#define LOG_FATAL(logger, msg) logger->fatal(msg, __FILE__, __FUNCTION__, __LINE__)
+#define LOG_TRACE(logger, msg) \
+    do { if (logger && logger->isLevelEnabled(NetworkSecurity::Common::LogLevel::TRACE)) \
+        logger->trace(msg, __FILE__, __FUNCTION__, __LINE__); } while(0)
 
+#define LOG_DEBUG(logger, msg) \
+    do { if (logger && logger->isLevelEnabled(NetworkSecurity::Common::LogLevel::DEBUG)) \
+        logger->debug(msg, __FILE__, __FUNCTION__, __LINE__); } while(0)
+
+#define LOG_INFO(logger, msg) \
+    do { if (logger && logger->isLevelEnabled(NetworkSecurity::Common::LogLevel::INFO)) \
+        logger->info(msg, __FILE__, __FUNCTION__, __LINE__); } while(0)
+
+#define LOG_WARN(logger, msg) \
+    do { if (logger && logger->isLevelEnabled(NetworkSecurity::Common::LogLevel::WARN)) \
+        logger->warn(msg, __FILE__, __FUNCTION__, __LINE__); } while(0)
+
+#define LOG_ERROR(logger, msg) \
+    do { if (logger && logger->isLevelEnabled(NetworkSecurity::Common::LogLevel::ERROR)) \
+        logger->error(msg, __FILE__, __FUNCTION__, __LINE__); } while(0)
+
+#define LOG_FATAL(logger, msg) \
+    do { if (logger && logger->isLevelEnabled(NetworkSecurity::Common::LogLevel::FATAL)) \
+        logger->fatal(msg, __FILE__, __FUNCTION__, __LINE__); } while(0)
+        
 // Formatted logging macros
 #define LOG_TRACE_FMT(logger, fmt, ...) logger->trace(fmt, __VA_ARGS__)
 #define LOG_DEBUG_FMT(logger, fmt, ...) logger->debug(fmt, __VA_ARGS__)
@@ -648,5 +665,8 @@ namespace NetworkSecurity
 #define LOG_WARN_FMT(logger, fmt, ...) logger->warn(fmt, __VA_ARGS__)
 #define LOG_ERROR_FMT(logger, fmt, ...) logger->error(fmt, __VA_ARGS__)
 #define LOG_FATAL_FMT(logger, fmt, ...) logger->fatal(fmt, __VA_ARGS__)
+
+
+
 
 #endif // LOGGER_HPP

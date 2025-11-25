@@ -4,6 +4,7 @@
 
 #include "pcap_writer.hpp"
 #include "../../common/packet_parser.hpp"
+#include "../../common/logger.hpp"
 #include <string>
 #include <memory>
 #include <atomic>
@@ -169,6 +170,9 @@ namespace NetworkSecurity
                 std::mutex m_mutex;
 
                 uint64_t m_file_start_time_us{0};
+
+                // Logger
+                std::shared_ptr<Common::Logger> m_logger;
 
                 /**
                  * @brief Tạo file mới
