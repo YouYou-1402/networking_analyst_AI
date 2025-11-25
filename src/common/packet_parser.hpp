@@ -287,6 +287,8 @@ namespace NetworkSecurity
          */
         struct ParsedPacket
         {
+            // ==================== Raw data =======================
+            const uint8_t* raw_data;
             // ==================== Metadata ====================
             uint64_t timestamp;          // Timestamp in microseconds
             size_t packet_size;          // Total packet size

@@ -1,6 +1,7 @@
 // test_packet_capture.cpp
 #include "packet_ingress.hpp"
 #include "packet_parser.hpp"
+#include "utils.hpp"
 #include <iostream>
 #include <iomanip>
 #include <csignal>
@@ -28,23 +29,25 @@ void signalHandler(int signum) {
 
 // ==================== Helper Functions ====================
 
-/**
- * @brief Format timestamp từ microseconds
- */
-std::string formatTimestamp(uint64_t timestamp_us) {
-    time_t seconds = timestamp_us / 1000000;
-    uint64_t microseconds = timestamp_us % 1000000;
+
+
+// /**
+//  * @brief Format timestamp từ microseconds
+//  */
+// std::string formatTimestamp(uint64_t timestamp_us) {
+//     time_t seconds = timestamp_us / 1000000;
+//     uint64_t microseconds = timestamp_us % 1000000;
     
-    struct tm timeinfo;
-    localtime_r(&seconds, &timeinfo);
+//     struct tm timeinfo;
+//     localtime_r(&seconds, &timeinfo);
     
-    char buffer[64];
-    strftime(buffer, sizeof(buffer), "%H:%M:%S", &timeinfo);
-    snprintf(buffer + strlen(buffer), sizeof(buffer) - strlen(buffer), 
-             ".%06lu", microseconds);
+//     char buffer[64];
+//     strftime(buffer, sizeof(buffer), "%H:%M:%S", &timeinfo);
+//     snprintf(buffer + strlen(buffer), sizeof(buffer) - strlen(buffer), 
+//              ".%06lu", microseconds);
     
-    return std::string(buffer);
-}
+//     return std::string(buffer);
+// }
 
 /**
  * @brief Format bytes size
@@ -111,7 +114,7 @@ void displayPacketCompact(const ParsedPacket& packet) {
     uint64_t count = g_packet_count.fetch_add(1) + 1;
     
     std::string protocol = PacketParser::getProtocolTypeName(packet.protocol_type);
-    std::string time_str = formatTimestamp(packet.timestamp);
+    std::string time_str = Utils::formatTimestamp(packet.timestamp);
     std::string size_str = std::to_string(packet.packet_size);
     
     // Build connection string
@@ -179,7 +182,7 @@ void displayPacketDetailed(const ParsedPacket& packet) {
     
     std::cout << "\n";
     std::cout << "╔═══════════════════════════════════════════════════════════════════════════════════════════════════════╗\n";
-    std::cout << "║ Packet #" << count << " - " << formatTimestamp(packet.timestamp) << std::string(72 - std::to_string(count).length(), ' ') << "║\n";
+    std::cout << "║ Packet #" << count << " - " << Utils::formatTimestamp(packet.timestamp) << std::string(72 - std::to_string(count).length(), ' ') << "║\n";
     std::cout << "╠═══════════════════════════════════════════════════════════════════════════════════════════════════════╣\n";
     
     // Ethernet

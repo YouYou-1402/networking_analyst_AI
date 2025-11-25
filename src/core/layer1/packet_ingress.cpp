@@ -70,7 +70,7 @@ namespace NetworkSecurity
                 return false;
             }
 
-            // 3. ✅ Tạo PCAP handle (KHÔNG dùng pcap_open_live)
+            // 3. Tạo PCAP handle (KHÔNG dùng pcap_open_live)
             char errbuf[PCAP_ERRBUF_SIZE];
             pcap_handle_ = pcap_create(config_.interface.c_str(), errbuf);
             
@@ -82,25 +82,25 @@ namespace NetworkSecurity
 
             spdlog::info("Successfully created pcap handle for {}", config_.interface);
 
-            // 4. ✅ Set SNAPLEN trước khi activate
+            // 4. Set SNAPLEN trước khi activate
             if (pcap_set_snaplen(pcap_handle_, config_.snaplen) != 0)
             {
                 spdlog::warn("Failed to set snaplen: {}", pcap_geterr(pcap_handle_));
             }
 
-            // 5. ✅ Set PROMISCUOUS MODE trước khi activate
+            // 5. Set PROMISCUOUS MODE trước khi activate
             if (pcap_set_promisc(pcap_handle_, config_.promiscuous ? 1 : 0) != 0)
             {
                 spdlog::warn("Failed to set promiscuous mode: {}", pcap_geterr(pcap_handle_));
             }
 
-            // 6. ✅ Set TIMEOUT trước khi activate
+            // 6. Set TIMEOUT trước khi activate
             if (pcap_set_timeout(pcap_handle_, config_.timeout_ms) != 0)
             {
                 spdlog::warn("Failed to set timeout: {}", pcap_geterr(pcap_handle_));
             }
 
-            // 7. ✅ Set BUFFER SIZE trước khi activate (QUAN TRỌNG!)
+            // 7. Set BUFFER SIZE trước khi activate (QUAN TRỌNG!)
             if (pcap_set_buffer_size(pcap_handle_, config_.buffer_size) != 0)
             {
                 spdlog::warn("Failed to set buffer size: {}", pcap_geterr(pcap_handle_));
@@ -113,13 +113,13 @@ namespace NetworkSecurity
                     config_.buffer_size / (1024 * 1024));
             }
 
-            // 8. ✅ Set IMMEDIATE MODE (giảm latency - optional)
+            // 8. Set IMMEDIATE MODE (giảm latency - optional)
             if (pcap_set_immediate_mode(pcap_handle_, 1) != 0)
             {
                 spdlog::debug("Failed to set immediate mode: {}", pcap_geterr(pcap_handle_));
             }
 
-            // 9. ✅ ACTIVATE sau khi đã set tất cả config
+            // 9. ACTIVATE sau khi đã set tất cả config
             spdlog::info("Activating pcap handle for {}...", config_.interface);
             int activate_result = pcap_activate(pcap_handle_);
 
@@ -158,7 +158,7 @@ namespace NetworkSecurity
 
             spdlog::info("Successfully opened interface: {}", config_.interface);
 
-            // 10. ✅ Thiết lập BPF filter (SAU khi activate)
+            // 10. Thiết lập BPF filter (SAU khi activate)
             if (!config_.bpf_filter.empty())
             {
                 if (!setBPFFilter())

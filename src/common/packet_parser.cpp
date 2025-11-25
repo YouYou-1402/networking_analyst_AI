@@ -28,6 +28,7 @@ namespace NetworkSecurity
 
             // Initialize parsed packet
             parsed = ParsedPacket();
+            parsed.raw_data = data;
             parsed.timestamp = Utils::getCurrentTimestampUs();
             parsed.packet_size = length;
             parsed.captured_length = length;

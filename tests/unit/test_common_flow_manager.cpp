@@ -411,20 +411,20 @@ TEST_F(FlowManagerTest, CleanupNoExpiredFlows)
 
 // ==================== Configuration Tests ====================
 
-// TEST_F(FlowManagerTest, SetMaxFlows)
-// {
-//     manager->setMaxFlows(5);
+TEST_F(FlowManagerTest, SetMaxFlows)
+{
+    manager->setMaxFlows(5);
     
-//     // Create 10 flows
-//     for (int i = 0; i < 10; i++)
-//     {
-//         ParsedPacket packet = createTestPacket(0x0A000001 + i, 0x0A000002, 12345 + i, 80);
-//         manager->processPacket(packet);
-//     }
+    // Create 10 flows
+    for (int i = 0; i < 10; i++)
+    {
+        ParsedPacket packet = createTestPacket(0x0A000001 + i, 0x0A000002, 12345 + i, 80);
+        manager->processPacket(packet);
+    }
     
-//     // Should not exceed max flows
-//     EXPECT_LE(manager->getFlowCount(), 5);
-// }
+    // Should not exceed max flows
+    EXPECT_LE(manager->getFlowCount(), 5);
+}
 
 TEST_F(FlowManagerTest, SetFlowTimeout)
 {

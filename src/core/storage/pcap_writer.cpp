@@ -76,15 +76,22 @@ namespace NetworkSecurity
                     return false;
                 }
 
-                // Kiểm tra payload
-                if (!packet.payload || packet.payload_length == 0)
+                if (!packet.raw_data || packet.captured_length == 0)
                 {
-                    std::cerr << "[PcapWriter] Invalid packet data" << std::endl;
+                    std::cerr << "[PcapWriter] Invalid packet: raw_data=" 
+                            << (void*)packet.raw_data 
+                            << ", captured_length=" << packet.captured_length << std::endl;
                     return false;
                 }
 
-                // Sử dụng payload và captured_length từ ParsedPacket
-                return writeRawPacket(packet.payload, packet.captured_length, packet.timestamp);
+                bool success = writeRawPacket(packet.raw_data, packet.captured_length, packet.timestamp);
+                
+                if (!success)
+                {
+                    std::cerr << "[PcapWriter] Failed to write packet" << std::endl;
+                }
+                
+                return success;
             }
 
             bool PcapWriter::writeRawPacket(const uint8_t *data, size_t length, uint64_t timestamp_us)
