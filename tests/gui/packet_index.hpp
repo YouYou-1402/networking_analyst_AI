@@ -59,7 +59,7 @@ namespace NetworkSecurity
             
             // Get PCAP file path
             std::string getPcapFile() const { return m_pcap_file; }
-            
+            bool matchesSimpleFilter(size_t index, const std::string& filter) const;
         private:
             std::string m_pcap_file;
             std::vector<PacketIndex> m_indices;
@@ -67,6 +67,9 @@ namespace NetworkSecurity
             
             // Parse basic info từ raw data
             bool parseBasicInfo(const u_char* data, uint32_t length, PacketIndex& index);
+            bool matchesProtocol(const PacketIndex& pkt, const std::string& protocol) const;
+            bool matchesAddress(const PacketIndex& pkt, const std::string& addr) const;
+            bool matchesPort(const PacketIndex& pkt, uint16_t port) const;
         };
     }
 }

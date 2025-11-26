@@ -1,7 +1,7 @@
 // src/core/layer1/packet_ingress.cpp
 
 #include "packet_ingress.hpp"
-#include "../../common/utils.hpp"
+#include "utils.hpp"
 #include <spdlog/spdlog.h>
 #include <chrono>
 #include <cstring>

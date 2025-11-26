@@ -2,8 +2,8 @@
 #ifndef PCAP_WRITER_HPP
 #define PCAP_WRITER_HPP
 
-#include "../../common/packet_parser.hpp"
-#include "../../common/logger.hpp"
+#include "packet_parser.hpp"
+#include "logger.hpp"
 #include <string>
 #include <atomic>
 #include <memory>

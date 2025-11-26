@@ -2,3 +2,4 @@
 build
 lib
 data
+./tests/gui/build

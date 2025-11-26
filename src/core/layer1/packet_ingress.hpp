@@ -12,7 +12,7 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <linux/if_packet.h>
-#include "../../common/packet_parser.hpp"
+#include "packet_parser.hpp"
 
 namespace NetworkSecurity
 {

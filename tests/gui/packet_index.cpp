@@ -4,7 +4,8 @@
 #include <pcap/pcap.h>
 #include <spdlog/spdlog.h>
 #include <arpa/inet.h>
-
+#include <algorithm>  
+#include <cctype>     
 using namespace NetworkSecurity::GUI;
 using namespace NetworkSecurity::Common;
 
@@ -174,4 +175,114 @@ void PcapIndexManager::clear()
         m_pcap_handle = nullptr;
     }
     m_pcap_file.clear();
+}
+
+
+bool PcapIndexManager::matchesSimpleFilter(size_t index, const std::string& filter) const
+{
+    const PacketIndex* pkt = getPacketIndex(index);
+    if (!pkt) return false;
+    
+    if (filter.empty()) return true;
+    
+    std::string lower_filter = filter;
+    std::transform(lower_filter.begin(), lower_filter.end(), lower_filter.begin(), ::tolower);
+    
+    // Protocol filters
+    if (lower_filter == "tcp") {
+        return matchesProtocol(*pkt, "TCP");
+    }
+    if (lower_filter == "udp") {
+        return matchesProtocol(*pkt, "UDP");
+    }
+    if (lower_filter == "icmp") {
+        return matchesProtocol(*pkt, "ICMP");
+    }
+    if (lower_filter == "arp") {
+        return matchesProtocol(*pkt, "ARP");
+    }
+    if (lower_filter == "ipv4") {
+        return matchesProtocol(*pkt, "IPv4");
+    }
+    if (lower_filter == "ipv6") {
+        return matchesProtocol(*pkt, "IPv6");
+    }
+    
+    // Port filters: tcp.port == 80
+    if (lower_filter.find("tcp.port") != std::string::npos ||
+        lower_filter.find("udp.port") != std::string::npos) {
+        
+        size_t pos = lower_filter.find("==");
+        if (pos != std::string::npos) {
+            std::string port_str = lower_filter.substr(pos + 2);
+            port_str.erase(0, port_str.find_first_not_of(" \t"));
+            
+            try {
+                uint16_t port = std::stoi(port_str);
+                return matchesPort(*pkt, port);
+            } catch (...) {
+                return false;
+            }
+        }
+    }
+    
+    // IP address filters: ip.addr == 192.168.1.1
+    if (lower_filter.find("ip.addr") != std::string::npos ||
+        lower_filter.find("ip.src") != std::string::npos ||
+        lower_filter.find("ip.dst") != std::string::npos) {
+        
+        size_t pos = lower_filter.find("==");
+        if (pos != std::string::npos) {
+            std::string addr = lower_filter.substr(pos + 2);
+            addr.erase(0, addr.find_first_not_of(" \t"));
+            addr.erase(addr.find_last_not_of(" \t") + 1);
+            
+            return matchesAddress(*pkt, addr);
+        }
+    }
+    
+    // Combined filters with && and ||
+    if (lower_filter.find("&&") != std::string::npos) {
+        size_t pos = lower_filter.find("&&");
+        std::string left = lower_filter.substr(0, pos);
+        std::string right = lower_filter.substr(pos + 2);
+        
+        left.erase(0, left.find_first_not_of(" \t"));
+        left.erase(left.find_last_not_of(" \t") + 1);
+        right.erase(0, right.find_first_not_of(" \t"));
+        right.erase(right.find_last_not_of(" \t") + 1);
+        
+        return matchesSimpleFilter(index, left) && matchesSimpleFilter(index, right);
+    }
+    
+    if (lower_filter.find("||") != std::string::npos) {
+        size_t pos = lower_filter.find("||");
+        std::string left = lower_filter.substr(0, pos);
+        std::string right = lower_filter.substr(pos + 2);
+        
+        left.erase(0, left.find_first_not_of(" \t"));
+        left.erase(left.find_last_not_of(" \t") + 1);
+        right.erase(0, right.find_first_not_of(" \t"));
+        right.erase(right.find_last_not_of(" \t") + 1);
+        
+        return matchesSimpleFilter(index, left) || matchesSimpleFilter(index, right);
+    }
+    
+    return false;
+}
+
+bool PcapIndexManager::matchesProtocol(const PacketIndex& pkt, const std::string& protocol) const
+{
+    return pkt.protocol == protocol;
+}
+
+bool PcapIndexManager::matchesAddress(const PacketIndex& pkt, const std::string& addr) const
+{
+    return pkt.src_addr.find(addr) != std::string::npos ||
+           pkt.dst_addr.find(addr) != std::string::npos;
+}
+
+bool PcapIndexManager::matchesPort(const PacketIndex& pkt, uint16_t port) const
+{
+    return pkt.src_port == port || pkt.dst_port == port;
 }

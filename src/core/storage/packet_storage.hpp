@@ -3,8 +3,8 @@
 #define PACKET_STORAGE_HPP
 
 #include "pcap_writer.hpp"
-#include "../../common/packet_parser.hpp"
-#include "../../common/logger.hpp"
+#include "packet_parser.hpp"
+#include "logger.hpp"
 #include <string>
 #include <memory>
 #include <atomic>

@@ -124,6 +124,8 @@ private:
     void displayPacketDetails(const ParsedPacket &packet);
     void loadVisiblePackets();
     void updateFilterStatistics();
+    bool isValidFilter(const std::string& filter);
+    void showFilterHelp();
     QString formatBytes(uint64_t bytes);
     QString getProtocolColor(const QString &protocol);
     

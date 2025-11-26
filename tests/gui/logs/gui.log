@@ -176,3 +176,87 @@
 [2025-11-26 15:37:51.081] [info] [71734] Filter applied: tcp - Showing 7206/7206 packets
 [2025-11-26 15:38:02.379] [info] [71734] Application exiting with code: 0
 [2025-11-26 15:38:02.379] [info] [71734] AdvancedFilterManager destroyed
+[2025-11-26 15:51:23.304] [info] [84154] Starting Network Security AI GUI...
+[2025-11-26 15:51:23.304] [info] [84154] Qt Version: 6.9.2
+[2025-11-26 15:51:23.371] [info] [84154] AdvancedFilterManager created
+[2025-11-26 15:51:23.371] [info] [84154] MainWindow initialized
+[2025-11-26 15:51:23.375] [info] [84154] GUI initialized successfully
+[2025-11-26 15:51:35.374] [info] [84154] Building index for: /media/linhlinh/learn/nckh/NetworkSecurityAI/data/pcap/4SICS-GeekLounge-151020.pcap
+[2025-11-26 15:51:35.551] [info] [84154] Index built: 246137 packets
+[2025-11-26 15:51:35.553] [debug] [84154] Loading packets with filter: ''
+[2025-11-26 15:51:37.602] [info] [84154] Loaded packets: 246137 displayed, 0 hidden out of 246137 total
+[2025-11-26 15:51:38.661] [info] [84154] Loaded PCAP file: /media/linhlinh/learn/nckh/NetworkSecurityAI/data/pcap/4SICS-GeekLounge-151020.pcap (246137 packets)
+[2025-11-26 15:51:40.348] [info] [84154] Display filter set: tcp
+[2025-11-26 15:51:40.407] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:51:42.312] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:51:42.312] [info] [84154] Filter applied: tcp - Mode: file - Showing 208940/246137 packets (84.9%)
+[2025-11-26 15:51:42.365] [info] [84154] Display filter set: tcp
+[2025-11-26 15:51:42.606] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:51:44.591] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:51:44.591] [info] [84154] Filter applied: tcp - Mode: file - Showing 208940/246137 packets (84.9%)
+[2025-11-26 15:51:44.592] [info] [84154] Display filter set: tcp
+[2025-11-26 15:51:44.838] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:51:46.863] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:51:46.863] [info] [84154] Filter applied: tcp - Mode: file - Showing 208940/246137 packets (84.9%)
+[2025-11-26 15:51:46.871] [info] [84154] Display filter set: tcp
+[2025-11-26 15:51:47.158] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:51:49.190] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:51:49.190] [info] [84154] Filter applied: tcp - Mode: file - Showing 208940/246137 packets (84.9%)
+[2025-11-26 15:51:51.004] [info] [84154] Display filter set: udp
+[2025-11-26 15:51:51.319] [debug] [84154] Loading packets with filter: 'udp'
+[2025-11-26 15:51:51.620] [info] [84154] Loaded packets: 27587 displayed, 218550 hidden out of 246137 total
+[2025-11-26 15:51:51.620] [info] [84154] Filter applied: udp - Mode: file - Showing 27587/246137 packets (11.2%)
+[2025-11-26 15:51:51.955] [info] [84154] Display filter set: udp
+[2025-11-26 15:51:51.994] [debug] [84154] Loading packets with filter: 'udp'
+[2025-11-26 15:51:52.300] [info] [84154] Loaded packets: 27587 displayed, 218550 hidden out of 246137 total
+[2025-11-26 15:51:52.300] [info] [84154] Filter applied: udp - Mode: file - Showing 27587/246137 packets (11.2%)
+[2025-11-26 15:51:54.003] [debug] [84154] Loading packets with filter: 'udp'
+[2025-11-26 15:51:54.320] [info] [84154] Loaded packets: 27587 displayed, 218550 hidden out of 246137 total
+[2025-11-26 15:51:54.362] [debug] [84154] Loading packets with filter: 'udp'
+[2025-11-26 15:51:54.659] [info] [84154] Loaded packets: 27587 displayed, 218550 hidden out of 246137 total
+[2025-11-26 15:51:54.702] [debug] [84154] Loading packets with filter: 'udp'
+[2025-11-26 15:51:55.014] [info] [84154] Loaded packets: 27587 displayed, 218550 hidden out of 246137 total
+[2025-11-26 15:51:55.032] [debug] [84154] Loading packets with filter: 'udp'
+[2025-11-26 15:51:55.338] [info] [84154] Loaded packets: 27587 displayed, 218550 hidden out of 246137 total
+[2025-11-26 15:51:55.381] [debug] [84154] Loading packets with filter: 'udp'
+[2025-11-26 15:51:55.664] [info] [84154] Loaded packets: 27587 displayed, 218550 hidden out of 246137 total
+[2025-11-26 15:51:55.697] [debug] [84154] Loading packets with filter: 'udp'
+[2025-11-26 15:51:55.999] [info] [84154] Loaded packets: 27587 displayed, 218550 hidden out of 246137 total
+[2025-11-26 15:51:56.043] [debug] [84154] Loading packets with filter: 'udp'
+[2025-11-26 15:51:56.343] [info] [84154] Loaded packets: 27587 displayed, 218550 hidden out of 246137 total
+[2025-11-26 15:51:56.378] [debug] [84154] Loading packets with filter: 'udp'
+[2025-11-26 15:51:56.678] [info] [84154] Loaded packets: 27587 displayed, 218550 hidden out of 246137 total
+[2025-11-26 15:52:02.371] [info] [84154] Display filter set: tcp
+[2025-11-26 15:52:02.412] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:52:04.123] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:52:04.124] [info] [84154] Filter applied: tcp - Mode: file - Showing 208940/246137 packets (84.9%)
+[2025-11-26 15:52:04.134] [info] [84154] Display filter set: tcp
+[2025-11-26 15:52:04.216] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:52:06.111] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:52:06.111] [info] [84154] Filter applied: tcp - Mode: file - Showing 208940/246137 packets (84.9%)
+[2025-11-26 15:52:08.539] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:52:10.382] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:52:10.545] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:52:12.465] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:52:12.696] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:52:14.563] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:52:14.730] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:52:16.671] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:52:16.934] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:52:18.829] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:52:19.040] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:52:21.003] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:52:21.853] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:52:23.688] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:52:23.899] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:52:25.772] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:52:26.013] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:52:27.900] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:52:28.120] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:52:30.046] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:52:30.278] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:52:32.248] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:52:32.478] [debug] [84154] Loading packets with filter: 'tcp'
+[2025-11-26 15:52:34.425] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 15:52:48.179] [info] [84154] Application exiting with code: 0
+[2025-11-26 15:52:48.188] [info] [84154] AdvancedFilterManager destroyed

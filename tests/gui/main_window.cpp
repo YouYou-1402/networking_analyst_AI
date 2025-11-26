@@ -234,6 +234,7 @@ void MainWindow::setupFilterPanel()
     customLayout->addWidget(new QLabel("Custom Filter:"));
     m_filterEdit = new QLineEdit();
     m_filterEdit->setPlaceholderText("e.g., ip.src == 192.168.1.1 && tcp.port == 80");
+    connect(m_filterEdit, &QLineEdit::returnPressed, this, &MainWindow::onApplyFilter);
     customLayout->addWidget(m_filterEdit, 1);
     layout->addLayout(customLayout);
     
@@ -246,8 +247,13 @@ void MainWindow::setupFilterPanel()
     m_clearFilterButton = new QPushButton("Clear Filter");
     connect(m_clearFilterButton, &QPushButton::clicked, this, &MainWindow::onClearFilter);
     
+    QPushButton *helpButton = new QPushButton("Help");
+    helpButton->setIcon(style()->standardIcon(QStyle::SP_MessageBoxQuestion));
+    connect(helpButton, &QPushButton::clicked, this, &MainWindow::showFilterHelp);
+
     filterButtonLayout->addWidget(m_applyFilterButton);
     filterButtonLayout->addWidget(m_clearFilterButton);
+    filterButtonLayout->addWidget(helpButton);
     layout->addLayout(filterButtonLayout);
     
     // Filter examples
@@ -613,22 +619,48 @@ void MainWindow::onApplyFilter()
         return;
     }
     
+    if (!isValidFilter(filterText.toStdString())) {
+        QMessageBox::warning(this, "Invalid Filter",
+            QString("The filter expression '%1' is not supported.\n\n"
+                   "Click 'Help' button to see supported syntax.")
+            .arg(filterText));
+        return;
+    }
+
     try {
-        if (m_filter_manager->setDisplayFilter(filterText.toStdString())) {
-            updatePacketTable();
-            
-            m_statusLabel->setText(QString("Filter applied: %1 (showing %2/%3 packets)")
-                                  .arg(filterText)
-                                  .arg(m_matched_packets.load())
-                                  .arg(m_total_packets.load()));
-            
-            spdlog::info("Filter applied: {} - Showing {}/{} packets", 
-                        filterText.toStdString(),
-                        m_matched_packets.load(),
-                        m_total_packets.load());
-        } else {
+        // Set filter in manager
+        if (!m_filter_manager->setDisplayFilter(filterText.toStdString())) {
             QMessageBox::critical(this, "Filter Error", "Invalid filter expression!");
+            return;
         }
+        
+        // Apply filter based on mode
+        if (m_is_file_mode) {
+            // File mode: Use lightweight filter on index
+            loadVisiblePackets();
+        } else {
+            // Live mode: Filter existing packets in memory
+            updatePacketTable();
+        }
+        
+        // Update status with correct counts
+        size_t matched = m_matched_packets.load();
+        size_t total = m_total_packets.load();
+        double match_rate = total > 0 ? (matched * 100.0 / total) : 0.0;
+        
+        m_statusLabel->setText(QString("Filter applied: %1 (showing %2/%3 packets, %4%)")
+                              .arg(filterText)
+                              .arg(matched)
+                              .arg(total)
+                              .arg(match_rate, 0, 'f', 1));
+        
+        spdlog::info("Filter applied: {} - Mode: {} - Showing {}/{} packets ({:.1f}%)", 
+                    filterText.toStdString(),
+                    m_is_file_mode ? "file" : "live",
+                    matched,
+                    total,
+                    match_rate);
+        
     } catch (const std::exception &e) {
         QMessageBox::critical(this, "Filter Error", 
                              QString("Invalid filter expression:\n%1").arg(e.what()));
@@ -641,8 +673,10 @@ void MainWindow::onClearFilter()
     m_filterEdit->clear();
     m_quickFilterCombo->setCurrentIndex(0);
     
-    if (m_filter_manager) {
-        m_filter_manager->clearDisplayFilter();
+    if (m_is_file_mode) {
+        loadVisiblePackets();
+    } else {
+        updatePacketTable();
     }
     
     updatePacketTable();
@@ -796,7 +830,7 @@ void MainWindow::updateStatistics()
     
     m_matchedPacketsLabel->setText(QString("Displayed: %1 (%.1f%%)")
                                    .arg(matched)
-                                   .arg(match_rate));
+                                   .arg(match_rate, 0, 'f', 1));
     
     // Hidden packets
     m_filteredPacketsLabel->setText(QString("Hidden: %1")
@@ -865,32 +899,43 @@ void MainWindow::loadVisiblePackets()
     
     size_t total = m_index_manager->getPacketCount();
     size_t displayed = 0;
+    size_t hidden = 0;
     
-    // Load all packets (filtering will be done by display filter)
+    // Get current filter
+    std::string current_filter;
+    if (m_filter_manager) {
+        auto stats = m_filter_manager->getStats();
+        current_filter = stats.current_filter;
+    }
+    
+    spdlog::debug("Loading packets with filter: '{}'", current_filter);
+    
+    // Load and filter packets
     for (size_t i = 0; i < total; i++) {
         const PacketIndex* index = m_index_manager->getPacketIndex(i);
         if (!index) continue;
         
         bool should_display = true;
         
-        // Apply filter if set
-        if (m_filter_manager) {
-            auto stats = m_filter_manager->getStats();
-            if (!stats.current_filter.empty()) {
-                // For now, show all - proper filtering requires loading full packet
-                // TODO: Implement lightweight filter on PacketIndex
-                should_display = true;
-            }
+        // Apply lightweight filter on PacketIndex
+        if (!current_filter.empty()) {
+            should_display = m_index_manager->matchesSimpleFilter(i, current_filter);
         }
         
         if (should_display) {
             addPacketToTable(index, i + 1);
             displayed++;
+        } else {
+            hidden++;
         }
     }
     
+    // Update counters
     m_matched_packets.store(displayed);
-    m_filtered_packets.store(total - displayed);
+    m_filtered_packets.store(hidden);
+    
+    spdlog::info("Loaded packets: {} displayed, {} hidden out of {} total", 
+                 displayed, hidden, total);
 }
 
 void MainWindow::addPacketToTable(const PacketIndex* index, size_t packet_num)
@@ -1234,6 +1279,78 @@ void MainWindow::handlePacket(const ParsedPacket &packet)
 }
 
 // ==================== Helper Functions ====================
+
+bool MainWindow::isValidFilter(const std::string& filter)
+{
+    if (filter.empty()) return true;
+    
+    // Simple validation
+    std::string lower = filter;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+    
+    // Check for supported protocols
+    if (lower == "tcp" || lower == "udp" || lower == "icmp" || 
+        lower == "arp" || lower == "ipv4" || lower == "ipv6") {
+        return true;
+    }
+    
+    // Check for port filters
+    if (lower.find("tcp.port") != std::string::npos ||
+        lower.find("udp.port") != std::string::npos) {
+        return true;
+    }
+    
+    // Check for IP filters
+    if (lower.find("ip.addr") != std::string::npos ||
+        lower.find("ip.src") != std::string::npos ||
+        lower.find("ip.dst") != std::string::npos) {
+        return true;
+    }
+    
+    // Check for logical operators
+    if (lower.find("&&") != std::string::npos ||
+        lower.find("||") != std::string::npos) {
+        return true;
+    }
+    
+    return false;
+}
+
+void MainWindow::showFilterHelp()
+{
+    QMessageBox::information(this, "Filter Syntax Help",
+        "<h3>Supported Filter Syntax:</h3>"
+        "<p><b>Protocol Filters:</b></p>"
+        "<ul>"
+        "<li><code>tcp</code> - TCP packets</li>"
+        "<li><code>udp</code> - UDP packets</li>"
+        "<li><code>icmp</code> - ICMP packets</li>"
+        "<li><code>arp</code> - ARP packets</li>"
+        "</ul>"
+        "<p><b>Port Filters:</b></p>"
+        "<ul>"
+        "<li><code>tcp.port == 80</code> - TCP port 80</li>"
+        "<li><code>udp.port == 53</code> - UDP port 53</li>"
+        "</ul>"
+        "<p><b>IP Address Filters:</b></p>"
+        "<ul>"
+        "<li><code>ip.addr == 192.168.1.1</code> - Any IP</li>"
+        "<li><code>ip.src == 10.0.0.1</code> - Source IP</li>"
+        "<li><code>ip.dst == 8.8.8.8</code> - Destination IP</li>"
+        "</ul>"
+        "<p><b>Logical Operators:</b></p>"
+        "<ul>"
+        "<li><code>tcp && tcp.port == 80</code> - AND</li>"
+        "<li><code>tcp.port == 80 || tcp.port == 443</code> - OR</li>"
+        "</ul>"
+        "<p><b>Examples:</b></p>"
+        "<ul>"
+        "<li><code>tcp.port == 80</code> - HTTP traffic</li>"
+        "<li><code>ip.addr == 192.168.1.1 && tcp</code> - TCP from/to specific IP</li>"
+        "<li><code>tcp.port == 80 || tcp.port == 443</code> - HTTP or HTTPS</li>"
+        "</ul>"
+    );
+}
 
 QString MainWindow::formatBytes(uint64_t bytes)
 {

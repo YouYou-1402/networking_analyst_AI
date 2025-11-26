@@ -1,6 +1,6 @@
 // src/core/storage/pcap_writer.cpp
 #include "pcap_writer.hpp"
-#include "../../common/utils.hpp"
+#include "utils.hpp"
 #include <sys/stat.h>
 #include <cstring>
 
