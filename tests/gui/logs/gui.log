@@ -1,0 +1,178 @@
+[2025-11-26 15:25:12.825] [info] [61841] Starting Network Security AI GUI...
+[2025-11-26 15:25:12.825] [info] [61841] Qt Version: 6.9.2
+[2025-11-26 15:25:12.882] [info] [61841] AdvancedFilterManager created
+[2025-11-26 15:25:12.882] [info] [61841] MainWindow initialized
+[2025-11-26 15:25:12.887] [info] [61841] GUI initialized successfully
+[2025-11-26 15:25:17.541] [info] [61841] PacketIngress created for interface: wlan0
+[2025-11-26 15:25:17.541] [info] [61841] Successfully created pcap handle for wlan0
+[2025-11-26 15:25:17.541] [info] [61841] Buffer size set to 10485760 bytes (10 MB)
+[2025-11-26 15:25:17.541] [info] [61841] Activating pcap handle for wlan0...
+[2025-11-26 15:25:17.592] [info] [61841] Successfully opened interface: wlan0
+[2025-11-26 15:25:17.592] [debug] [61841] Hardware timestamping not available
+[2025-11-26 15:25:17.592] [debug] [61841] Hardware timestamping not available, using software timestamp
+[2025-11-26 15:25:17.592] [info] [61841] Datalink type: EN10MB (Ethernet)
+[2025-11-26 15:25:17.592] [info] [61841] PacketIngress initialized successfully for wlan0
+[2025-11-26 15:25:17.592] [info] [61841]   - Snaplen: 65535 bytes
+[2025-11-26 15:25:17.592] [info] [61841]   - Buffer: 10 MB
+[2025-11-26 15:25:17.592] [info] [61841]   - Promiscuous: enabled
+[2025-11-26 15:25:17.592] [info] [61841]   - Timeout: 1000 ms
+[2025-11-26 15:25:17.592] [info] [61841] Packet capture started on interface: wlan0
+[2025-11-26 15:25:17.592] [info] [61968] ========================================
+[2025-11-26 15:25:17.592] [info] [61968] Packet capture STARTED
+[2025-11-26 15:25:17.592] [info] [61968] Interface: wlan0
+[2025-11-26 15:25:17.592] [info] [61968] Start time: 1756-05-10 20:57:20.305
+[2025-11-26 15:25:17.592] [info] [61968] ========================================
+[2025-11-26 15:25:17.592] [debug] [61969] Capture loop started for wlan0
+[2025-11-26 15:25:20.845] [info] [61841] Stopping packet capture on wlan0...
+[2025-11-26 15:25:20.845] [debug] [61969] pcap_loop stopped by breakloop
+[2025-11-26 15:25:20.845] [debug] [61969] Capture loop ended for wlan0
+[2025-11-26 15:25:20.845] [info] [61841] ========================================
+[2025-11-26 15:25:20.845] [info] [61841] Packet capture STOPPED
+[2025-11-26 15:25:20.845] [info] [61841] Interface: wlan0
+[2025-11-26 15:25:20.845] [info] [61841] End time: 1756-05-10 21:51:33.731
+[2025-11-26 15:25:20.845] [info] [61841] Duration: 3 seconds
+[2025-11-26 15:25:20.845] [info] [61841] ----------------------------------------
+[2025-11-26 15:25:20.845] [info] [61841] Statistics:
+[2025-11-26 15:25:20.846] [info] [61841]   - Packets received: 19
+[2025-11-26 15:25:20.846] [info] [61841]   - Packets dropped: 0
+[2025-11-26 15:25:20.846] [info] [61841]   - Bytes received: 4441 (0.00 MB)
+[2025-11-26 15:25:20.846] [info] [61841]   - Errors: 0
+[2025-11-26 15:25:20.846] [info] [61841]   - Average rate: 7.14 packets/sec
+[2025-11-26 15:25:20.846] [info] [61841] ========================================
+[2025-11-26 15:25:20.923] [info] [61841] PacketIngress destroyed for interface: wlan0
+[2025-11-26 15:25:20.923] [info] [61841] Packet capture stopped
+[2025-11-26 15:25:27.933] [info] [61841] PacketIngress created for interface: wlan0
+[2025-11-26 15:25:27.933] [info] [61841] Successfully created pcap handle for wlan0
+[2025-11-26 15:25:27.934] [info] [61841] Buffer size set to 10485760 bytes (10 MB)
+[2025-11-26 15:25:27.934] [info] [61841] Activating pcap handle for wlan0...
+[2025-11-26 15:25:27.959] [info] [61841] Successfully opened interface: wlan0
+[2025-11-26 15:25:27.960] [debug] [61841] Hardware timestamping not available
+[2025-11-26 15:25:27.960] [debug] [61841] Hardware timestamping not available, using software timestamp
+[2025-11-26 15:25:27.960] [info] [61841] Datalink type: EN10MB (Ethernet)
+[2025-11-26 15:25:27.960] [info] [61841] PacketIngress initialized successfully for wlan0
+[2025-11-26 15:25:27.960] [info] [61841]   - Snaplen: 65535 bytes
+[2025-11-26 15:25:27.960] [info] [61841]   - Buffer: 10 MB
+[2025-11-26 15:25:27.960] [info] [61841]   - Promiscuous: enabled
+[2025-11-26 15:25:27.960] [info] [61841]   - Timeout: 1000 ms
+[2025-11-26 15:25:27.960] [info] [62135] ========================================
+[2025-11-26 15:25:27.960] [info] [62135] Packet capture STARTED
+[2025-11-26 15:25:27.960] [info] [62135] Interface: wlan0
+[2025-11-26 15:25:27.960] [info] [62135] Start time: 1756-05-10 23:50:08.345
+[2025-11-26 15:25:27.960] [info] [62135] ========================================
+[2025-11-26 15:25:27.960] [debug] [62136] Capture loop started for wlan0
+[2025-11-26 15:25:27.960] [info] [61841] Packet capture started on interface: wlan0
+[2025-11-26 15:26:15.325] [info] [61841] Display filter set: tcp
+[2025-11-26 15:26:15.332] [info] [61841] Filter applied: tcp - Showing 338/672 packets
+[2025-11-26 15:26:19.973] [info] [61841] Display filter set: udp
+[2025-11-26 15:26:19.977] [info] [61841] Filter applied: udp - Showing 100/706 packets
+[2025-11-26 15:26:22.516] [info] [61841] Stopping packet capture on wlan0...
+[2025-11-26 15:26:22.516] [debug] [62136] pcap_loop stopped by breakloop
+[2025-11-26 15:26:22.516] [debug] [62136] Capture loop ended for wlan0
+[2025-11-26 15:26:22.516] [info] [61841] ========================================
+[2025-11-26 15:26:22.516] [info] [61841] Packet capture STOPPED
+[2025-11-26 15:26:22.516] [info] [61841] Interface: wlan0
+[2025-11-26 15:26:22.516] [info] [61841] End time: 1756-05-11 14:59:24.795
+[2025-11-26 15:26:22.516] [info] [61841] Duration: 54 seconds
+[2025-11-26 15:26:22.516] [info] [61841] ----------------------------------------
+[2025-11-26 15:26:22.516] [info] [61841] Statistics:
+[2025-11-26 15:26:22.516] [info] [61841]   - Packets received: 724
+[2025-11-26 15:26:22.516] [info] [61841]   - Packets dropped: 0
+[2025-11-26 15:26:22.516] [info] [61841]   - Bytes received: 136995 (0.13 MB)
+[2025-11-26 15:26:22.516] [info] [61841]   - Errors: 0
+[2025-11-26 15:26:22.516] [info] [61841]   - Average rate: 13.29 packets/sec
+[2025-11-26 15:26:22.516] [info] [61841] ========================================
+[2025-11-26 15:26:22.578] [info] [61841] PacketIngress destroyed for interface: wlan0
+[2025-11-26 15:26:22.579] [info] [61841] Packet capture stopped
+[2025-11-26 15:26:26.316] [info] [61841] Display filter cleared
+[2025-11-26 15:26:34.941] [info] [61841] Display filter set: tcp
+[2025-11-26 15:26:34.949] [info] [61841] Filter applied: tcp - Showing 386/724 packets
+[2025-11-26 15:26:36.053] [info] [61841] Display filter set: tcp
+[2025-11-26 15:26:36.061] [info] [61841] Filter applied: tcp - Showing 386/724 packets
+[2025-11-26 15:26:50.613] [info] [61841] Display filter set: udp
+[2025-11-26 15:26:50.617] [info] [61841] Filter applied: udp - Showing 100/724 packets
+[2025-11-26 15:26:57.173] [info] [61841] Display filter set: arp
+[2025-11-26 15:26:57.178] [info] [61841] Filter applied: arp - Showing 238/724 packets
+[2025-11-26 15:27:28.414] [info] [61841] Application exiting with code: 0
+[2025-11-26 15:27:28.414] [info] [61841] AdvancedFilterManager destroyed
+[2025-11-26 15:30:52.740] [info] [67054] Starting Network Security AI GUI...
+[2025-11-26 15:30:52.740] [info] [67054] Qt Version: 6.9.2
+[2025-11-26 15:30:52.805] [info] [67054] AdvancedFilterManager created
+[2025-11-26 15:30:52.805] [info] [67054] MainWindow initialized
+[2025-11-26 15:30:52.809] [info] [67054] GUI initialized successfully
+[2025-11-26 15:31:00.597] [info] [67054] Building index for: /media/linhlinh/learn/nckh/NetworkSecurityAI/data/pcap/fuzz-2006-07-05-1209.pcap
+[2025-11-26 15:31:00.611] [info] [67054] Index built: 13804 packets
+[2025-11-26 15:31:03.614] [info] [67054] Loaded PCAP file: /media/linhlinh/learn/nckh/NetworkSecurityAI/data/pcap/fuzz-2006-07-05-1209.pcap (13804 packets)
+[2025-11-26 15:31:25.109] [info] [67054] Building index for: /media/linhlinh/learn/nckh/NetworkSecurityAI/data/pcap/4SICS-GeekLounge-151020.pcap
+[2025-11-26 15:31:25.286] [info] [67054] Index built: 246137 packets
+[2025-11-26 15:31:28.695] [info] [67054] Loaded PCAP file: /media/linhlinh/learn/nckh/NetworkSecurityAI/data/pcap/4SICS-GeekLounge-151020.pcap (246137 packets)
+[2025-11-26 15:32:01.069] [info] [67054] Display filter set: ip.src == 192.179.88.1
+[2025-11-26 15:32:03.247] [info] [67054] Filter applied: ip.src == 192.179.88.1 - Showing 246137/246137 packets
+[2025-11-26 15:32:22.211] [info] [67054] Display filter set: ip.src == 192.179.88.1
+[2025-11-26 15:32:24.640] [info] [67054] Filter applied: ip.src == 192.179.88.1 - Showing 246137/246137 packets
+[2025-11-26 15:32:24.647] [info] [67054] Display filter cleared
+[2025-11-26 15:32:27.122] [info] [67054] Display filter cleared
+[2025-11-26 15:32:29.650] [info] [67054] Display filter cleared
+[2025-11-26 15:32:46.877] [info] [67054] Display filter set: tcp
+[2025-11-26 15:32:49.384] [info] [67054] Filter applied: tcp - Showing 246137/246137 packets
+[2025-11-26 15:32:55.508] [info] [67054] Application exiting with code: 0
+[2025-11-26 15:32:55.519] [info] [67054] AdvancedFilterManager destroyed
+[2025-11-26 15:35:45.896] [info] [71252] Starting Network Security AI GUI...
+[2025-11-26 15:35:45.896] [info] [71252] Qt Version: 6.9.2
+[2025-11-26 15:35:45.954] [info] [71252] AdvancedFilterManager created
+[2025-11-26 15:35:45.954] [info] [71252] MainWindow initialized
+[2025-11-26 15:35:45.958] [info] [71252] GUI initialized successfully
+[2025-11-26 15:35:54.518] [info] [71252] Building index for: /media/linhlinh/learn/nckh/NetworkSecurityAI/data/pcap/1.pcapng
+[2025-11-26 15:35:54.526] [info] [71252] Index built: 7206 packets
+[2025-11-26 15:35:55.813] [info] [71252] Loaded PCAP file: /media/linhlinh/learn/nckh/NetworkSecurityAI/data/pcap/1.pcapng (7206 packets)
+[2025-11-26 15:36:01.877] [info] [71252] Application exiting with code: 0
+[2025-11-26 15:36:01.878] [info] [71252] AdvancedFilterManager destroyed
+[2025-11-26 15:36:10.060] [info] [71734] Starting Network Security AI GUI...
+[2025-11-26 15:36:10.060] [info] [71734] Qt Version: 6.9.2
+[2025-11-26 15:36:10.119] [info] [71734] AdvancedFilterManager created
+[2025-11-26 15:36:10.119] [info] [71734] MainWindow initialized
+[2025-11-26 15:36:10.123] [info] [71734] GUI initialized successfully
+[2025-11-26 15:36:19.428] [info] [71734] Building index for: /media/linhlinh/learn/nckh/NetworkSecurityAI/data/pcap/1.pcapng
+[2025-11-26 15:36:19.434] [info] [71734] Index built: 7206 packets
+[2025-11-26 15:36:20.244] [info] [71734] Loaded PCAP file: /media/linhlinh/learn/nckh/NetworkSecurityAI/data/pcap/1.pcapng (7206 packets)
+[2025-11-26 15:37:01.202] [info] [71734] Display filter set: tcp
+[2025-11-26 15:37:01.265] [info] [71734] Filter applied: tcp - Showing 7206/7206 packets
+[2025-11-26 15:37:02.523] [info] [71734] Display filter set: tcp
+[2025-11-26 15:37:02.593] [info] [71734] Filter applied: tcp - Showing 7206/7206 packets
+[2025-11-26 15:37:06.131] [info] [71734] Display filter set: tcp
+[2025-11-26 15:37:06.201] [info] [71734] Filter applied: tcp - Showing 7206/7206 packets
+[2025-11-26 15:37:06.395] [info] [71734] Display filter set: tcp
+[2025-11-26 15:37:06.466] [info] [71734] Filter applied: tcp - Showing 7206/7206 packets
+[2025-11-26 15:37:15.307] [info] [71734] Display filter set: udp
+[2025-11-26 15:37:15.379] [info] [71734] Filter applied: udp - Showing 7206/7206 packets
+[2025-11-26 15:37:15.763] [info] [71734] Display filter set: udp
+[2025-11-26 15:37:15.835] [info] [71734] Filter applied: udp - Showing 7206/7206 packets
+[2025-11-26 15:37:19.371] [info] [71734] Display filter set: udp
+[2025-11-26 15:37:19.439] [info] [71734] Filter applied: udp - Showing 7206/7206 packets
+[2025-11-26 15:37:22.987] [info] [71734] Display filter set: udp
+[2025-11-26 15:37:23.058] [info] [71734] Filter applied: udp - Showing 7206/7206 packets
+[2025-11-26 15:37:23.171] [info] [71734] Display filter set: udp
+[2025-11-26 15:37:23.239] [info] [71734] Filter applied: udp - Showing 7206/7206 packets
+[2025-11-26 15:37:23.347] [info] [71734] Display filter set: udp
+[2025-11-26 15:37:23.419] [info] [71734] Filter applied: udp - Showing 7206/7206 packets
+[2025-11-26 15:37:23.523] [info] [71734] Display filter set: udp
+[2025-11-26 15:37:23.593] [info] [71734] Filter applied: udp - Showing 7206/7206 packets
+[2025-11-26 15:37:23.716] [info] [71734] Display filter set: udp
+[2025-11-26 15:37:23.786] [info] [71734] Filter applied: udp - Showing 7206/7206 packets
+[2025-11-26 15:37:28.186] [info] [71734] Display filter set: tcp
+[2025-11-26 15:37:28.257] [info] [71734] Filter applied: tcp - Showing 7206/7206 packets
+[2025-11-26 15:37:29.243] [info] [71734] Display filter set: tcp
+[2025-11-26 15:37:29.312] [info] [71734] Filter applied: tcp - Showing 7206/7206 packets
+[2025-11-26 15:37:41.523] [info] [71734] Display filter cleared
+[2025-11-26 15:37:41.596] [info] [71734] Display filter cleared
+[2025-11-26 15:37:42.987] [info] [71734] Display filter cleared
+[2025-11-26 15:37:43.194] [info] [71734] Display filter cleared
+[2025-11-26 15:37:46.403] [info] [71734] Display filter set: tcp
+[2025-11-26 15:37:46.473] [info] [71734] Filter applied: tcp - Showing 7206/7206 packets
+[2025-11-26 15:37:46.891] [info] [71734] Display filter set: tcp
+[2025-11-26 15:37:46.961] [info] [71734] Filter applied: tcp - Showing 7206/7206 packets
+[2025-11-26 15:37:50.707] [info] [71734] Display filter set: tcp
+[2025-11-26 15:37:50.777] [info] [71734] Filter applied: tcp - Showing 7206/7206 packets
+[2025-11-26 15:37:51.010] [info] [71734] Display filter set: tcp
+[2025-11-26 15:37:51.081] [info] [71734] Filter applied: tcp - Showing 7206/7206 packets
+[2025-11-26 15:38:02.379] [info] [71734] Application exiting with code: 0
+[2025-11-26 15:38:02.379] [info] [71734] AdvancedFilterManager destroyed
