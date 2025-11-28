@@ -24,63 +24,120 @@ namespace NetworkSecurity
         // ==================== Constructor & Destructor ====================
 
         MainWindow::MainWindow(QWidget* parent)
-            : QMainWindow(parent),
-              main_splitter_(nullptr),
-              detail_splitter_(nullptr),
-              packet_list_(nullptr),
-              packet_detail_(nullptr),
-              packet_hex_(nullptr),
-              filter_bar_(nullptr),
-              status_bar_(nullptr),
-              file_menu_(nullptr),
-              edit_menu_(nullptr),
-              view_menu_(nullptr),
-              go_menu_(nullptr),
-              capture_menu_(nullptr),
-              analyze_menu_(nullptr),
-              statistics_menu_(nullptr),
-              tools_menu_(nullptr),
-              help_menu_(nullptr),
-              main_toolbar_(nullptr),
-              display_toolbar_(nullptr),
-              capture_dialog_(nullptr),
-              preferences_dialog_(nullptr),
-              is_capturing_(false),
-              is_live_capture_(false),
-              selected_packet_index_(-1),
-              packet_count_(0),
-              displayed_count_(0),
-              marked_count_(0),
-              bytes_captured_(0),
-              capture_start_time_(0),
-              capture_duration_(0.0),
-              capture_timer_(nullptr),
-              stats_timer_(nullptr)
-        {
-            setupUI();
-            setupMenuBar();
-            setupToolBar();
-            setupStatusBar();
-            setupConnections();
-            loadSettings();
-
-            // Initialize parser and filter
-            packet_parser_ = std::make_unique<Common::PacketParser>();
-            packet_filter_ = std::make_unique<Layer1::Filter::PacketFilter>();
-
-            // Setup timers
-            capture_timer_ = new QTimer(this);
-            connect(capture_timer_, &QTimer::timeout, this, &MainWindow::updateCaptureTime);
-
-            stats_timer_ = new QTimer(this);
-            connect(stats_timer_, &QTimer::timeout, this, &MainWindow::updateStatusBar);
-            stats_timer_->start(UPDATE_INTERVAL_MS);
-
-            setWindowTitle(tr("Network Security Analyzer"));
-            resize(1200, 800);
-
-            spdlog::info("MainWindow initialized");
-        }
+            : QMainWindow(parent)
+            , is_capturing_(false)
+            , is_live_capture_(false)
+            , selected_packet_index_(-1)
+            , capture_start_time_(0)
+            , capture_duration_(0.0)
+            , packet_count_(0)
+            , displayed_count_(0)
+            , marked_count_(0)
+            , bytes_captured_(0)
+            , current_file_()
+            , current_interface_()
+            , current_filter_()
+            , settings_()
+            , packets_()
+            , filtered_indices_()
+            , packet_parser_(nullptr)
+            , packet_filter_(nullptr)
+            , packet_ingress_(nullptr)
+            , main_splitter_(nullptr)
+            , detail_splitter_(nullptr)
+            , packet_list_(nullptr)
+            , packet_detail_(nullptr)
+            , packet_hex_(nullptr)
+            , filter_bar_(nullptr)
+            , status_bar_(nullptr)
+            , file_menu_(nullptr)
+            , edit_menu_(nullptr)
+            , view_menu_(nullptr)
+            , go_menu_(nullptr)
+            , capture_menu_(nullptr)
+            , analyze_menu_(nullptr)
+            , statistics_menu_(nullptr)
+            , tools_menu_(nullptr)
+            , help_menu_(nullptr)
+            , main_toolbar_(nullptr)
+            , display_toolbar_(nullptr)
+            , capture_dialog_(nullptr)
+            , preferences_dialog_(nullptr)
+            , action_open_(nullptr)
+            , action_save_(nullptr)
+            , action_save_as_(nullptr)
+            , action_export_(nullptr)
+            , action_close_(nullptr)
+            , action_quit_(nullptr)
+            , action_copy_(nullptr)
+            , action_find_(nullptr)
+            , action_find_next_(nullptr)
+            , action_mark_packet_(nullptr)
+            , action_mark_all_(nullptr)
+            , action_unmark_all_(nullptr)
+            , action_preferences_(nullptr)
+            , action_zoom_in_(nullptr)
+            , action_zoom_out_(nullptr)
+            , action_reset_zoom_(nullptr)
+            , action_fullscreen_(nullptr)
+            , action_coloring_rules_(nullptr)
+            , action_time_display_(nullptr)
+            , action_name_resolution_(nullptr)
+            , action_go_to_packet_(nullptr)
+            , action_first_packet_(nullptr)
+            , action_last_packet_(nullptr)
+            , action_next_packet_(nullptr)
+            , action_previous_packet_(nullptr)
+            , action_start_capture_(nullptr)
+            , action_stop_capture_(nullptr)
+            , action_restart_capture_(nullptr)
+            , action_capture_options_(nullptr)
+            , action_capture_interfaces_(nullptr)
+            , action_follow_tcp_(nullptr)
+            , action_follow_udp_(nullptr)
+            , action_expert_info_(nullptr)
+            , capture_timer_(nullptr)
+            , stats_timer_(nullptr)
+            {
+                try {
+                    spdlog::info("MainWindow constructor started");
+                    
+                    // Initialize core components
+                    packet_parser_ = std::make_unique<Common::PacketParser>();
+                    packet_filter_ = std::make_unique<Layer1::Filter::PacketFilter>();
+                    
+                    // Setup UI
+                    setupUI();
+                    setupMenuBar();
+                    setupToolBar();
+                    setupStatusBar();
+                    setupConnections();
+                    
+                    // Load settings
+                    loadSettings();
+                    applyTheme();
+                    
+                    // Create timers
+                    capture_timer_ = new QTimer(this);
+                    stats_timer_ = new QTimer(this);
+                    stats_timer_->setInterval(UPDATE_INTERVAL_MS);
+                    
+                    connect(stats_timer_, &QTimer::timeout, this, &MainWindow::updateStatusBar);
+                    stats_timer_->start();
+                    
+                    setWindowTitle(tr("Network Security Analyzer"));
+                    resize(1280, 800);
+                    
+                    spdlog::info("MainWindow initialized successfully");
+                    
+                } catch (const std::exception& e) {
+                    spdlog::error("MainWindow constructor exception: {}", e.what());
+                    throw;
+                } catch (...) {
+                    spdlog::error("MainWindow constructor unknown exception");
+                    throw;
+                }
+            }
 
         MainWindow::~MainWindow()
         {
