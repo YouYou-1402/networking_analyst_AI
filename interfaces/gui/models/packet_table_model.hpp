@@ -6,9 +6,9 @@
 #include <QAbstractTableModel>
 #include <QColor>
 #include <QFont>
+#include <QDateTime>
 #include <vector>
 #include <memory>
-
 #include "common/packet_parser.hpp"
 #include "utils/color_rules.hpp"
 
@@ -17,14 +17,40 @@ namespace NetworkSecurity
     namespace GUI
     {
         /**
-         * @brief Table model for packet list
+         * @brief Packet entry with display metadata
+         */
+        struct PacketEntry
+        {
+            size_t index;                      // Packet number (0-based)
+            uint64_t timestamp;                // Timestamp (microseconds since epoch)
+            Common::ParsedPacket parsed;       // Parsed packet data
+            std::vector<uint8_t> raw_data;     // Raw packet bytes
+            
+            // Display properties
+            QColor background;                 // Background color
+            QColor foreground;                 // Text color
+            bool marked;                       // User marked flag
+            bool filtered;                     // Matches current filter
+            
+            PacketEntry()
+                : index(0)
+                , timestamp(0)
+                , background(Qt::white)
+                , foreground(Qt::black)
+                , marked(false)
+                , filtered(true)
+            {}
+        };
+
+        /**
+         * @brief Table model for packet list (Wireshark-like)
          */
         class PacketTableModel : public QAbstractTableModel
         {
             Q_OBJECT
 
         public:
-            // Column definitions
+            // ==================== Column Definitions ====================
             enum Column {
                 COL_NUMBER = 0,
                 COL_TIME,
@@ -36,117 +62,177 @@ namespace NetworkSecurity
                 COL_COUNT
             };
 
-            // Time format
+            // ==================== Time Format ====================
             enum TimeFormat {
-                TIME_ABSOLUTE,
-                TIME_RELATIVE,
-                TIME_DELTA,
-                TIME_EPOCH
+                TIME_ABSOLUTE,      // 2024-01-15 14:30:25.123456
+                TIME_RELATIVE,      // 0.123456 (since first packet)
+                TIME_DELTA,         // 0.000123 (since previous packet)
+                TIME_EPOCH          // 1705329025.123456
             };
 
             explicit PacketTableModel(QObject* parent = nullptr);
-            ~PacketTableModel();
+            ~PacketTableModel() override;
 
             // ==================== QAbstractTableModel Interface ====================
             int rowCount(const QModelIndex& parent = QModelIndex()) const override;
             int columnCount(const QModelIndex& parent = QModelIndex()) const override;
             QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
-            QVariant headerData(int section, Qt::Orientation orientation,
+            QVariant headerData(int section, Qt::Orientation orientation, 
                               int role = Qt::DisplayRole) const override;
             Qt::ItemFlags flags(const QModelIndex& index) const override;
 
             // ==================== Packet Management ====================
-            void addPacket(const Common::ParsedPacket& packet,
+            void addPacket(const Common::ParsedPacket& packet, 
                           const std::vector<uint8_t>& raw_data);
             void clearPackets();
-            void updatePacket(int index);
-
-            const Common::ParsedPacket* getPacket(int index) const;
-            const std::vector<uint8_t>* getRawData(int index) const;
-
+            void removePacket(int row);
+            void updatePacket(int row);
+            
+            const PacketEntry& getPacket(int row) const;
+            const PacketEntry& getPacketByIndex(size_t index) const;
             int getPacketCount() const;
-            int getDisplayedCount() const;
-
-            // ==================== Marking ====================
-            void markPacket(int index, bool marked = true);
-            void markAll();
-            void unmarkAll();
-            bool isMarked(int index) const;
+            int getTotalPacketCount() const;
+            std::vector<PacketEntry> getAllPackets() const;
 
             // ==================== Filtering ====================
             void setFilter(const QString& filter);
-            void clearFilter();
+            QString getFilter() const;
             void applyFilter();
+            void clearFilter();
+            bool isFiltering() const;
+
+            // ==================== Color Rules ====================
+            void setColorRules(ColorRules* rules);
+            ColorRules* getColorRules() const;
+            void setColoringEnabled(bool enabled);
+            bool isColoringEnabled() const;
+            void refreshColors();
+            void applyColorRules();
+
+            // ==================== Marking ====================
+            void markPacket(int row, bool marked = true);
+            void unmarkPacket(int row);
+            bool isMarked(int row) const;
+            void markAll();
+            void unmarkAll();
+            void toggleMark(int row);
+            int getMarkedCount() const;
 
             // ==================== Display Settings ====================
             void setTimeFormat(TimeFormat format);
             TimeFormat getTimeFormat() const;
-
-            void setColoringEnabled(bool enabled);
-            bool isColoringEnabled() const;
-
             void setColumnVisible(int column, bool visible);
             bool isColumnVisible(int column) const;
+            void resetColumns();
 
             // ==================== Sorting ====================
             void sortByColumn(int column, Qt::SortOrder order);
 
-            // ==================== Color Rules ====================
-            ColorRules* getColorRules() const;
-            void setColorRules(std::unique_ptr<ColorRules> rules);
+            // ==================== Statistics ====================
+            struct Statistics {
+                int total_packets;
+                int filtered_packets;
+                int marked_packets;
+                uint64_t first_timestamp;
+                uint64_t last_timestamp;
+                size_t total_bytes;
+            };
+            Statistics getStatistics() const;
+
+        signals:
+            void packetsChanged();
+            void packetAdded(int row);
+            void filterChanged();
+            void coloringChanged();
 
         private:
-            // ==================== MOVE PacketEntry to PUBLIC or add getters ====================
-            struct PacketEntry {
-                Common::ParsedPacket parsed;
-                std::vector<uint8_t> raw_data;
-                uint64_t timestamp;
-                size_t index;
-                bool marked;
-                bool filtered;
-                QColor color;
-            };
+            // ==================== Data Storage ====================
+            std::vector<PacketEntry> packets_;          // All packets
+            std::vector<size_t> filtered_indices_;      // Indices of filtered packets
+            
+            // ==================== Color Rules ====================
+            ColorRules* color_rules_;                   // External ownership
+            bool coloring_enabled_;
+            
+            // ==================== Display Settings ====================
+            TimeFormat time_format_;
+            std::vector<bool> column_visible_;
+            
+            // ==================== Time Tracking ====================
+            uint64_t first_packet_time_;
+            uint64_t last_packet_time_;
+            
+            // ==================== Filtering ====================
+            QString current_filter_;
+            bool filtering_enabled_;
 
-            // ==================== Helper Methods (ADD DECLARATIONS) ====================
+            // ==================== Helper Methods ====================
             QVariant getDisplayData(const PacketEntry& entry, int column) const;
+            QVariant getBackgroundColor(const PacketEntry& entry) const;
+            QVariant getForegroundColor(const PacketEntry& entry) const;
             QVariant getToolTip(const PacketEntry& entry, int column) const;
             QFont getPacketFont(const PacketEntry& entry) const;
+            QString formatTcpConnection(const Common::ParsedPacket& packet, 
+                                                        const QString& protocol) const
+            {
+                if (!packet.has_tcp) {
+                    return protocol;
+                }
 
-            // Formatting helpers
+                QString src_ip, dst_ip;
+
+                // Format source IP
+                if (packet.has_ipv4) {
+                    src_ip = formatIPv4(packet.ipv4.src_ip);
+                    dst_ip = formatIPv4(packet.ipv4.dst_ip);
+                } else if (packet.has_ipv6) {
+                    src_ip = formatIPv6(packet.ipv6.src_ip);
+                    dst_ip = formatIPv6(packet.ipv6.dst_ip);
+                } else {
+                    src_ip = "Unknown";
+                    dst_ip = "Unknown";
+                }
+
+                return QString("%1 %2:%3 → %4:%5")
+                    .arg(protocol)
+                    .arg(src_ip)
+                    .arg(packet.tcp.src_port)
+                    .arg(dst_ip)
+                    .arg(packet.tcp.dst_port);
+            }
+       
+            // ==================== Formatting ====================
             QString formatTime(uint64_t timestamp) const;
+            QString formatIPv4(uint32_t ip) const;
+            QString formatIPv6(const uint8_t* ip) const;
+            QString formatMAC(const uint8_t* mac) const;
             QString formatSource(const PacketEntry& entry) const;
             QString formatDestination(const PacketEntry& entry) const;
             QString formatProtocol(const PacketEntry& entry) const;
             QString formatLength(const PacketEntry& entry) const;
             QString formatInfo(const PacketEntry& entry) const;
-
-            // IP formatting helpers
-            QString formatIPv4(uint32_t ip) const;
-            QString formatIPv6(const uint8_t* ip) const;
-            QString formatMAC(const uint8_t* mac) const;
-
-            // Protocol info helpers
+            
+            // ==================== Protocol Info ====================
             QString getTCPInfo(const Common::ParsedPacket& packet) const;
             QString getUDPInfo(const Common::ParsedPacket& packet) const;
             QString getICMPInfo(const Common::ParsedPacket& packet) const;
             QString getARPInfo(const Common::ParsedPacket& packet) const;
             QString getDNSInfo(const Common::ParsedPacket& packet) const;
             QString getHTTPInfo(const Common::ParsedPacket& packet) const;
-
-            // Data
-            std::vector<PacketEntry> packets_;
-            std::vector<size_t> filtered_indices_;
-            std::unique_ptr<ColorRules> color_rules_;
-
-            // Settings
-            TimeFormat time_format_;
-            bool coloring_enabled_;
-            std::vector<bool> column_visible_;
-            QString current_filter_;
-
-            // Time tracking
-            uint64_t first_packet_time_;
-            uint64_t last_packet_time_;
+            QString getSSHInfo(const Common::ParsedPacket& packet) const;
+            QString getFTPInfo(const Common::ParsedPacket& packet) const;
+            
+            // ==================== Color Helpers ====================
+            void applyColorRule(PacketEntry& entry);
+            void resetColor(PacketEntry& entry);
+            
+            // ==================== Filter Helpers ====================
+            bool matchesFilter(const PacketEntry& entry) const;
+            void rebuildFilteredIndices();
+            
+            // ==================== Index Mapping ====================
+            size_t mapRowToIndex(int row) const;
+            int mapIndexToRow(size_t index) const;
         };
 
     } // namespace GUI

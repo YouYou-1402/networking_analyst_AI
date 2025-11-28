@@ -389,10 +389,14 @@ namespace NetworkSecurity
 
         void MainWindow::setupStatusBar()
         {
-            auto* real_sb = new QStatusBar(this);
-            status_bar_ = new StatusBarWidget(real_sb); 
-            real_sb->addPermanentWidget(status_bar_, 1);
-            setStatusBar(real_sb);
+            auto* sb = new StatusBarWidget(this);
+            status_bar_ = sb;
+
+            // Dùng qobject_cast cũng được (vì có Q_OBJECT)
+            setStatusBar(qobject_cast<QStatusBar*>(sb));
+
+            connect(sb, &StatusBarWidget::expertInfoClicked,
+                    this, &MainWindow::onAnalyzeExpertInfo);
         }
 
         void MainWindow::setupConnections()

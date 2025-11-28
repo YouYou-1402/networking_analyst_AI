@@ -288,211 +288,473 @@ namespace NetworkSecurity
         {
             QList<ColorRule> rules;
 
-            // TCP
+            // ==================== CRITICAL ERRORS (Priority 100+) ====================
+            
+            // TCP RST - Đỏ đậm (ngắt kết nối)
             rules.append(ColorRule(
-                "TCP",
-                "tcp",
-                QColor(0, 0, 0),        // Black text
-                QColor(231, 230, 255),  // Light blue background
-                true, 10
+                "TCP RST",
+                "tcp.flags.reset == 1",
+                QColor(139, 0, 0),      // Chữ đỏ đậm
+                QColor(255, 200, 200),  // Nền đỏ nhạt
+                true, 100
             ));
 
-            // UDP
+            // Bad TCP - Đỏ (lỗi nghiêm trọng)
             rules.append(ColorRule(
-                "UDP",
-                "udp",
+                "Bad TCP",
+                "tcp.analysis.flags",
+                QColor(139, 0, 0),
+                QColor(255, 220, 220),
+                true, 95
+            ));
+
+            // ==================== WARNINGS (Priority 50-90) ====================
+
+            // TCP Retransmission - Cam (cảnh báo)
+            rules.append(ColorRule(
+                "TCP Retransmission",
+                "tcp.analysis.retransmission",
+                QColor(184, 92, 0),     // Chữ cam đậm
+                QColor(255, 235, 200),  // Nền cam nhạt
+                true, 80
+            ));
+
+            // TCP SYN - Xanh dương nhạt (bắt đầu kết nối)
+            rules.append(ColorRule(
+                "TCP SYN",
+                "tcp.flags.syn == 1 && tcp.flags.ack == 0",
+                QColor(0, 0, 139),      // Chữ xanh đậm
+                QColor(200, 230, 255),  // Nền xanh nhạt
+                true, 70
+            ));
+
+            // Broadcast - Vàng (gói tin broadcast)
+            rules.append(ColorRule(
+                "Broadcast",
+                "eth.dst == ff:ff:ff:ff:ff:ff",
+                QColor(139, 117, 0),    // Chữ vàng đậm
+                QColor(255, 255, 200),  // Nền vàng nhạt
+                true, 60
+            ));
+
+            // Multicast - Xanh lá nhạt
+            rules.append(ColorRule(
+                "Multicast",
+                "eth.dst[0] & 1",
+                QColor(0, 100, 0),      // Chữ xanh lá đậm
+                QColor(235, 255, 235),  // Nền xanh lá nhạt
+                true, 55
+            ));
+
+            // ==================== WEB SERVICES (Priority 30-40) ====================
+
+            // HTTPS/TLS - Xanh dương đậm (bảo mật)
+            rules.append(ColorRule(
+                "HTTPS/TLS",
+                "ssl || tls",
                 QColor(0, 0, 0),
-                QColor(218, 238, 255),  // Light cyan
-                true, 10
+                QColor(200, 220, 255),  // Nền xanh dương nhạt
+                true, 40
             ));
 
-            // ICMP
-            rules.append(ColorRule(
-                "ICMP",
-                "icmp",
-                QColor(0, 0, 0),
-                QColor(252, 224, 255),  // Light purple
-                true, 10
-            ));
-
-            // ARP
-            rules.append(ColorRule(
-                "ARP",
-                "arp",
-                QColor(0, 0, 0),
-                QColor(255, 255, 224),  // Light yellow
-                true, 10
-            ));
-
-            // HTTP
+            // HTTP - Xanh lục (web không mã hóa)
             rules.append(ColorRule(
                 "HTTP",
                 "http",
                 QColor(0, 0, 0),
-                QColor(228, 255, 199),  // Light green
-                true, 20
+                QColor(220, 255, 220),  // Nền xanh lục nhạt
+                true, 35
             ));
 
-            // HTTPS/TLS
+            // WebSocket - Xanh tím
             rules.append(ColorRule(
-                "HTTPS",
-                "ssl || tls",
+                "WebSocket",
+                "websocket",
                 QColor(0, 0, 0),
-                QColor(164, 224, 255),  // Sky blue
-                true, 20
+                QColor(230, 220, 255),  // Nền tím nhạt
+                true, 38
             ));
 
-            // DNS
+            // ==================== REMOTE ACCESS (Priority 30-35) ====================
+
+            // SSH - Xanh đậm (truy cập từ xa bảo mật)
+            rules.append(ColorRule(
+                "SSH",
+                "ssh || tcp.port == 22",
+                QColor(255, 255, 255),  // Chữ trắng
+                QColor(70, 130, 180),   // Nền xanh đậm
+                true, 35
+            ));
+
+            // Telnet - Đỏ nhạt (không bảo mật)
+            rules.append(ColorRule(
+                "Telnet",
+                "telnet || tcp.port == 23",
+                QColor(139, 0, 0),
+                QColor(255, 230, 230),
+                true, 34
+            ));
+
+            // RDP - Xanh navy
+            rules.append(ColorRule(
+                "RDP",
+                "rdp || tcp.port == 3389",
+                QColor(255, 255, 255),
+                QColor(65, 105, 225),   // Royal blue
+                true, 33
+            ));
+
+            // VNC - Tím
+            rules.append(ColorRule(
+                "VNC",
+                "vnc || tcp.port == 5900",
+                QColor(255, 255, 255),
+                QColor(138, 43, 226),   // Blue violet
+                true, 32
+            ));
+
+            // ==================== FILE TRANSFER (Priority 25-30) ====================
+
+            // FTP - Hồng (truyền file)
+            rules.append(ColorRule(
+                "FTP",
+                "ftp || ftp-data || tcp.port == 21 || tcp.port == 20",
+                QColor(0, 0, 0),
+                QColor(255, 220, 240),  // Nền hồng nhạt
+                true, 30
+            ));
+
+            // SFTP - Hồng đậm hơn (FTP bảo mật)
+            rules.append(ColorRule(
+                "SFTP",
+                "sftp || tcp.port == 115",
+                QColor(0, 0, 0),
+                QColor(255, 200, 230),
+                true, 31
+            ));
+
+            // SMB/CIFS - Cam nhạt (chia sẻ file Windows)
+            rules.append(ColorRule(
+                "SMB/CIFS",
+                "smb || smb2 || tcp.port == 445 || tcp.port == 139",
+                QColor(0, 0, 0),
+                QColor(255, 228, 196),  // Bisque
+                true, 28
+            ));
+
+            // NFS - Cam vàng (chia sẻ file Unix)
+            rules.append(ColorRule(
+                "NFS",
+                "nfs || tcp.port == 2049",
+                QColor(0, 0, 0),
+                QColor(255, 239, 213),  // Papaya whip
+                true, 27
+            ));
+
+            // ==================== EMAIL (Priority 25-28) ====================
+
+            // SMTP - Cam nhạt (gửi mail)
+            rules.append(ColorRule(
+                "SMTP",
+                "smtp || tcp.port == 25 || tcp.port == 587",
+                QColor(0, 0, 0),
+                QColor(255, 245, 220),  // Nền cam rất nhạt
+                true, 28
+            ));
+
+            // POP3 - Vàng nhạt (nhận mail)
+            rules.append(ColorRule(
+                "POP3",
+                "pop || tcp.port == 110 || tcp.port == 995",
+                QColor(0, 0, 0),
+                QColor(255, 250, 205),  // Lemon chiffon
+                true, 27
+            ));
+
+            // IMAP - Vàng xanh (nhận mail)
+            rules.append(ColorRule(
+                "IMAP",
+                "imap || tcp.port == 143 || tcp.port == 993",
+                QColor(0, 0, 0),
+                QColor(240, 255, 240),  // Honeydew
+                true, 26
+            ));
+
+            // ==================== DNS & DHCP (Priority 20-25) ====================
+
+            // DNS - Tím nhạt (phân giải tên miền)
             rules.append(ColorRule(
                 "DNS",
                 "dns",
                 QColor(0, 0, 0),
-                QColor(255, 255, 199),  // Pale yellow
+                QColor(240, 230, 255),  // Nền tím nhạt
+                true, 25
+            ));
+
+            // DHCP - Xanh lơ (cấp phát IP)
+            rules.append(ColorRule(
+                "DHCP",
+                "dhcp || bootp",
+                QColor(0, 0, 0),
+                QColor(224, 255, 255),  // Light cyan
+                true, 24
+            ));
+
+            // mDNS/Bonjour - Tím nhạt hơn
+            rules.append(ColorRule(
+                "mDNS",
+                "mdns || udp.port == 5353",
+                QColor(0, 0, 0),
+                QColor(245, 240, 255),
+                true, 23
+            ));
+
+            // ==================== DATABASE (Priority 20-25) ====================
+
+            // MySQL - Xanh dương nhạt
+            rules.append(ColorRule(
+                "MySQL",
+                "mysql || tcp.port == 3306",
+                QColor(0, 0, 0),
+                QColor(220, 235, 255),
+                true, 23
+            ));
+
+            // PostgreSQL - Xanh dương đậm hơn
+            rules.append(ColorRule(
+                "PostgreSQL",
+                "pgsql || tcp.port == 5432",
+                QColor(0, 0, 0),
+                QColor(200, 225, 255),
+                true, 22
+            ));
+
+            // MongoDB - Xanh lá
+            rules.append(ColorRule(
+                "MongoDB",
+                "mongodb || tcp.port == 27017",
+                QColor(0, 0, 0),
+                QColor(220, 255, 220),
+                true, 21
+            ));
+
+            // Redis - Đỏ nhạt
+            rules.append(ColorRule(
+                "Redis",
+                "redis || tcp.port == 6379",
+                QColor(0, 0, 0),
+                QColor(255, 230, 230),
                 true, 20
             ));
 
-            // SSH
+            // ==================== NETWORK PROTOCOLS (Priority 15-20) ====================
+
+            // ARP - Vàng cam (địa chỉ MAC)
             rules.append(ColorRule(
-                "SSH",
-                "ssh",
+                "ARP",
+                "arp",
+                QColor(0, 0, 0),
+                QColor(255, 245, 220),  // Nền vàng cam nhạt
+                true, 18
+            ));
+
+            // ICMP - Xanh lơ (ping, traceroute)
+            rules.append(ColorRule(
+                "ICMP",
+                "icmp",
+                QColor(0, 0, 0),
+                QColor(230, 250, 255),  // Nền xanh lơ nhạt
+                true, 17
+            ));
+
+            // IGMP - Xanh lục nhạt (multicast)
+            rules.append(ColorRule(
+                "IGMP",
+                "igmp",
+                QColor(0, 0, 0),
+                QColor(240, 255, 240),
+                true, 16
+            ));
+
+            // ==================== STREAMING & MEDIA (Priority 15-18) ====================
+
+            // RTP - Tím hồng (voice/video)
+            rules.append(ColorRule(
+                "RTP",
+                "rtp",
+                QColor(0, 0, 0),
+                QColor(255, 230, 255),  // Lavender
+                true, 18
+            ));
+
+            // RTSP - Tím nhạt (streaming control)
+            rules.append(ColorRule(
+                "RTSP",
+                "rtsp || tcp.port == 554",
+                QColor(0, 0, 0),
+                QColor(245, 230, 255),
+                true, 17
+            ));
+
+            // SIP - Hồng nhạt (VoIP)
+            rules.append(ColorRule(
+                "SIP",
+                "sip",
+                QColor(0, 0, 0),
+                QColor(255, 240, 245),
+                true, 16
+            ));
+
+            // ==================== TRANSPORT LAYER (Priority 5-10) ====================
+
+            // TCP - Xanh nhạt (mặc định)
+            rules.append(ColorRule(
+                "TCP",
+                "tcp",
+                QColor(0, 0, 0),
+                QColor(240, 248, 255),  // Nền xanh rất nhạt
+                true, 10
+            ));
+
+            // UDP - Xanh lá rất nhạt (mặc định)
+            rules.append(ColorRule(
+                "UDP",
+                "udp",
+                QColor(0, 0, 0),
+                QColor(245, 255, 245),  // Nền xanh lá rất nhạt
+                true, 10
+            ));
+
+            // SCTP - Xanh tím nhạt
+            rules.append(ColorRule(
+                "SCTP",
+                "sctp",
+                QColor(0, 0, 0),
+                QColor(240, 240, 255),
+                true, 10
+            ));
+
+            // ==================== SECURITY & VPN (Priority 30-35) ====================
+
+            // IPsec - Xanh đậm (VPN)
+            rules.append(ColorRule(
+                "IPsec",
+                "esp || ah || isakmp",
                 QColor(255, 255, 255),
-                QColor(70, 130, 180),   // Steel blue
-                true, 20
+                QColor(100, 149, 237),  // Cornflower blue
+                true, 35
             ));
 
-            // FTP
+            // OpenVPN - Xanh lục đậm
             rules.append(ColorRule(
-                "FTP",
-                "ftp || ftp-data",
-                QColor(0, 0, 0),
-                QColor(255, 192, 203),  // Pink
-                true, 20
-            ));
-
-            // SMTP
-            rules.append(ColorRule(
-                "SMTP",
-                "smtp",
-                QColor(0, 0, 0),
-                QColor(255, 228, 196),  // Bisque
-                true, 20
-            ));
-
-            // TCP SYN
-            rules.append(ColorRule(
-                "TCP SYN",
-                "tcp.flags.syn == 1 && tcp.flags.ack == 0",
-                QColor(0, 0, 0),
-                QColor(160, 160, 255),  // Light blue
-                true, 30
-            ));
-
-            // TCP RST
-            rules.append(ColorRule(
-                "TCP RST",
-                "tcp.flags.reset == 1",
+                "OpenVPN",
+                "openvpn || udp.port == 1194",
                 QColor(255, 255, 255),
-                QColor(255, 0, 0),      // Red
-                true, 40
+                QColor(60, 179, 113),   // Medium sea green
+                true, 34
             ));
 
-            // TCP Retransmission
+            // WireGuard - Xanh navy
             rules.append(ColorRule(
-                "TCP Retransmission",
-                "tcp.analysis.retransmission",
-                QColor(0, 0, 0),
-                QColor(255, 165, 0),    // Orange
-                true, 50
-            ));
-
-            // Bad TCP
-            rules.append(ColorRule(
-                "Bad TCP",
-                "tcp.analysis.flags",
+                "WireGuard",
+                "udp.port == 51820",
                 QColor(255, 255, 255),
-                QColor(128, 0, 0),      // Dark red
-                true, 60
+                QColor(25, 25, 112),    // Midnight blue
+                true, 33
             ));
 
-            // Broadcast
+            // ==================== MONITORING & MANAGEMENT (Priority 15-20) ====================
+
+            // SNMP - Vàng nhạt (giám sát)
             rules.append(ColorRule(
-                "Broadcast",
-                "eth.dst == ff:ff:ff:ff:ff:ff",
+                "SNMP",
+                "snmp || udp.port == 161 || udp.port == 162",
                 QColor(0, 0, 0),
-                QColor(255, 255, 0),    // Yellow
-                true, 15
+                QColor(255, 255, 224),
+                true, 20
             ));
 
-            // Multicast
+            // Syslog - Cam nhạt (log)
             rules.append(ColorRule(
-                "Multicast",
-                "eth.dst[0] & 1",
+                "Syslog",
+                "syslog || udp.port == 514",
                 QColor(0, 0, 0),
-                QColor(255, 255, 224),  // Light yellow
-                true, 15
+                QColor(255, 248, 220),
+                true, 19
+            ));
+
+            // NetFlow - Xanh lơ (phân tích traffic)
+            rules.append(ColorRule(
+                "NetFlow",
+                "cflow || udp.port == 2055",
+                QColor(0, 0, 0),
+                QColor(230, 245, 255),
+                true, 18
             ));
 
             return rules;
         }
 
+        // ==================== Create Helper Functions ====================
+
         ColorRule ColorRules::createTCPRule()
         {
             return ColorRule("TCP", "tcp", 
-                           QColor(0, 0, 0), QColor(231, 230, 255));
+                           QColor(0, 0, 0), QColor(240, 248, 255));
         }
 
         ColorRule ColorRules::createUDPRule()
         {
             return ColorRule("UDP", "udp",
-                           QColor(0, 0, 0), QColor(218, 238, 255));
+                           QColor(0, 0, 0), QColor(245, 255, 245));
         }
 
         ColorRule ColorRules::createICMPRule()
         {
             return ColorRule("ICMP", "icmp",
-                           QColor(0, 0, 0), QColor(252, 224, 255));
+                           QColor(0, 0, 0), QColor(230, 250, 255));
         }
 
         ColorRule ColorRules::createARPRule()
         {
             return ColorRule("ARP", "arp",
-                           QColor(0, 0, 0), QColor(255, 255, 224));
+                           QColor(0, 0, 0), QColor(255, 245, 220));
         }
 
         ColorRule ColorRules::createHTTPRule()
         {
             return ColorRule("HTTP", "http",
-                           QColor(0, 0, 0), QColor(228, 255, 199));
+                           QColor(0, 0, 0), QColor(220, 255, 220));
         }
 
         ColorRule ColorRules::createHTTPSRule()
         {
             return ColorRule("HTTPS", "ssl || tls",
-                           QColor(0, 0, 0), QColor(164, 224, 255));
+                           QColor(0, 0, 0), QColor(200, 220, 255));
         }
 
         ColorRule ColorRules::createDNSRule()
         {
             return ColorRule("DNS", "dns",
-                           QColor(0, 0, 0), QColor(255, 255, 199));
+                           QColor(0, 0, 0), QColor(240, 230, 255));
         }
 
         ColorRule ColorRules::createErrorRule()
         {
             return ColorRule("Error", "tcp.analysis.flags",
-                           QColor(255, 255, 255), QColor(128, 0, 0));
+                           QColor(139, 0, 0), QColor(255, 220, 220));
         }
 
         ColorRule ColorRules::createWarningRule()
         {
             return ColorRule("Warning", "tcp.analysis.retransmission",
-                           QColor(0, 0, 0), QColor(255, 165, 0));
+                           QColor(184, 92, 0), QColor(255, 235, 200));
         }
 
         ColorRule ColorRules::createRetransmissionRule()
         {
             return ColorRule("Retransmission", "tcp.analysis.retransmission",
-                           QColor(0, 0, 0), QColor(255, 165, 0));
+                           QColor(184, 92, 0), QColor(255, 235, 200));
         }
 
         // ==================== Helper Methods ====================
@@ -529,7 +791,7 @@ namespace NetworkSecurity
                 return packet.app_protocol == Common::AppProtocol::HTTPS;
             if (f == "dns") return packet.app_protocol == Common::AppProtocol::DNS;
             if (f == "ssh") return packet.app_protocol == Common::AppProtocol::SSH;
-            if (f == "ftp") return packet.app_protocol == Common::AppProtocol::FTP;
+            if (f == "ftp" || f == "ftp-data") return packet.app_protocol == Common::AppProtocol::FTP;
             if (f == "smtp") return packet.app_protocol == Common::AppProtocol::SMTP;
 
             // TCP flags
@@ -569,6 +831,18 @@ namespace NetworkSecurity
             // Multicast (first bit of MAC is 1)
             if (f.contains("eth.dst[0] & 1") && packet.has_ethernet) {
                 return (packet.ethernet.dst_mac[0] & 0x01) != 0;
+            }
+
+            // Port-based detection
+            if (f.contains("tcp.port") && packet.has_tcp) {
+                QString port_str = f.mid(f.indexOf("==") + 2).trimmed();
+                uint16_t port = port_str.toUInt();
+                return packet.tcp.src_port == port || packet.tcp.dst_port == port;
+            }
+            if (f.contains("udp.port") && packet.has_udp) {
+                QString port_str = f.mid(f.indexOf("==") + 2).trimmed();
+                uint16_t port = port_str.toUInt();
+                return packet.udp.src_port == port || packet.udp.dst_port == port;
             }
 
             // OR operator
