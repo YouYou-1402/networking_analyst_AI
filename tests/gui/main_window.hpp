@@ -92,7 +92,7 @@ private slots:
     void onApplyFilter();
     void onClearFilter();
     void onQuickFilter(const QString &text);
-    
+    void resetFilter();
     // UI updates
     void updateStatistics();
     void updatePacketTable();

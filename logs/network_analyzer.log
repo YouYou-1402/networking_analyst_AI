@@ -1,0 +1,73 @@
+[2025-11-28 10:53:24.339] [info] [178707] ========================================
+[2025-11-28 10:53:24.339] [info] [178707]   Network Security Analyzer v1.0.0
+[2025-11-28 10:53:24.339] [info] [178707] ========================================
+[2025-11-28 10:53:24.339] [info] [178707] Logging initialized
+[2025-11-28 10:53:24.339] [info] [178707] Log level: info
+[2025-11-28 10:53:24.339] [info] [178707] Permission check passed
+[2025-11-28 10:53:24.339] [info] [178707] Using system theme
+[2025-11-28 10:53:24.358] [info] [178707] Loaded 16 default color rules
+[2025-11-28 10:53:24.362] [info] [178707] Settings loaded
+[2025-11-28 10:53:24.362] [info] [178707] MainWindow initialized
+[2025-11-28 10:53:24.374] [info] [178707] Application started successfully
+[2025-11-28 10:53:33.564] [info] [178707] Loaded 14 network interfaces
+[2025-11-28 10:53:33.564] [info] [178707] Capture dialog created
+[2025-11-28 10:53:43.242] [info] [178707] Starting capture on interface: wlan0
+[2025-11-28 10:53:43.244] [info] [178707] PacketIngress created for interface: wlan0
+[2025-11-28 10:53:43.244] [info] [178707] Successfully created pcap handle for wlan0
+[2025-11-28 10:53:43.244] [info] [178707] Buffer size set to 2097152 bytes (2 MB)
+[2025-11-28 10:53:43.244] [info] [178707] Activating pcap handle for wlan0...
+[2025-11-28 10:53:43.277] [info] [178707] Successfully opened interface: wlan0
+[2025-11-28 10:53:43.277] [info] [178707] Datalink type: EN10MB (Ethernet)
+[2025-11-28 10:53:43.277] [info] [178707] PacketIngress initialized successfully for wlan0
+[2025-11-28 10:53:43.277] [info] [178707]   - Snaplen: 65535 bytes
+[2025-11-28 10:53:43.277] [info] [178707]   - Buffer: 2 MB
+[2025-11-28 10:53:43.277] [info] [178707]   - Promiscuous: enabled
+[2025-11-28 10:53:43.277] [info] [178707]   - Timeout: 1000 ms
+[2025-11-28 10:53:43.277] [info] [178707] ========================================
+[2025-11-28 10:53:43.277] [info] [178707] Packet capture STARTED
+[2025-11-28 10:53:43.277] [info] [178707] Interface: wlan0
+[2025-11-28 10:53:43.277] [info] [178707] Start time: 57878-07-04 14:21:17.475
+[2025-11-28 10:53:43.277] [info] [178707] ========================================
+[2025-11-28 10:53:43.278] [info] [178707] Started capture on interface: wlan0
+[2025-11-28 10:54:02.955] [error] [178707] Parse error at position 1: Unknown field: t (got '')
+[2025-11-28 10:54:03.202] [error] [178707] Parse error at position 2: Unknown field: tc (got '')
+[2025-11-28 10:54:07.865] [info] [178707] Applying filter: tcp
+[2025-11-28 10:54:07.876] [info] [178707] Filter applied: tcp
+[2025-11-28 10:54:26.947] [info] [178707] Stopping packet capture on wlan0...
+[2025-11-28 10:54:26.947] [info] [178707] ========================================
+[2025-11-28 10:54:26.947] [info] [178707] Packet capture STOPPED
+[2025-11-28 10:54:26.947] [info] [178707] Interface: wlan0
+[2025-11-28 10:54:26.947] [info] [178707] End time: 57878-07-05 02:29:07.779
+[2025-11-28 10:54:26.947] [info] [178707] Duration: 43 seconds
+[2025-11-28 10:54:26.947] [info] [178707] ----------------------------------------
+[2025-11-28 10:54:26.947] [info] [178707] Statistics:
+[2025-11-28 10:54:26.947] [info] [178707]   - Packets received: 339
+[2025-11-28 10:54:26.947] [info] [178707]   - Packets dropped: 0
+[2025-11-28 10:54:26.947] [info] [178707]   - Bytes received: 163364 (0.16 MB)
+[2025-11-28 10:54:26.947] [info] [178707]   - Errors: 0
+[2025-11-28 10:54:26.947] [info] [178707]   - Average rate: 7.77 packets/sec
+[2025-11-28 10:54:26.947] [info] [178707] ========================================
+[2025-11-28 10:54:27.013] [info] [178707] PacketIngress destroyed for interface: wlan0
+[2025-11-28 10:54:27.013] [info] [178707] Stopped capture
+[2025-11-28 10:54:27.014] [info] [178707] Settings saved
+[2025-11-28 10:54:27.021] [info] [178707] Application exiting with code 0
+[2025-11-28 10:54:27.021] [info] [178707] ========================================
+[2025-11-28 10:54:27.021] [info] [178707] Settings saved
+[2025-11-28 10:54:27.023] [info] [178707] MainWindow destroyed
+[2025-11-28 10:54:27.034] [info] [178707] Capture dialog destroyed
+[2025-11-28 10:54:34.940] [info] [179957] ========================================
+[2025-11-28 10:54:34.940] [info] [179957]   Network Security Analyzer v1.0.0
+[2025-11-28 10:54:34.940] [info] [179957] ========================================
+[2025-11-28 10:54:34.940] [info] [179957] Logging initialized
+[2025-11-28 10:54:34.940] [info] [179957] Log level: info
+[2025-11-28 10:54:34.940] [info] [179957] Permission check passed
+[2025-11-28 10:54:34.940] [info] [179957] Using system theme
+[2025-11-28 10:54:34.950] [info] [179957] Loaded 16 default color rules
+[2025-11-28 10:54:34.957] [info] [179957] Settings loaded
+[2025-11-28 10:54:34.957] [info] [179957] MainWindow initialized
+[2025-11-28 10:54:34.962] [info] [179957] Application started successfully
+[2025-11-28 10:54:37.571] [info] [179957] Settings saved
+[2025-11-28 10:54:37.600] [info] [179957] Application exiting with code 0
+[2025-11-28 10:54:37.600] [info] [179957] ========================================
+[2025-11-28 10:54:37.600] [info] [179957] Settings saved
+[2025-11-28 10:54:37.602] [info] [179957] MainWindow destroyed

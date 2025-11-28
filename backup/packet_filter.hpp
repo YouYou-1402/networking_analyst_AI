@@ -3,7 +3,7 @@
 #ifndef NETWORK_SECURITY_LAYER1_PACKET_FILTER_HPP
 #define NETWORK_SECURITY_LAYER1_PACKET_FILTER_HPP
 
-#include "packet_parser.hpp"
+#include "common/packet_parser.hpp"
 #include <fstream>      
 #include <sstream>     
 #include <string>

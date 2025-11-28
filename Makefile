@@ -79,7 +79,7 @@ LDFLAGS  += $(shell pkg-config --libs $(QT_MODULES))
 # ==================== System Libraries ====================
 CXXFLAGS += $(shell pkg-config --cflags libpcap spdlog 2>/dev/null || true)
 LDFLAGS  += $(shell pkg-config --libs libpcap spdlog 2>/dev/null || true)
-LDFLAGS  += -pthread -lcap
+LDFLAGS  += -pthread -lcap -lz -lbz2 -llzma -lcrypto -lssl
 
 # ==================== Source Files ====================
 COMMON_SRCS := \
@@ -96,7 +96,8 @@ LAYER1_SRCS := \
     $(SRC)/core/layer1/filter/filter_field_evaluator.cpp \
     $(SRC)/core/layer1/filter/filter_parser.cpp \
     $(SRC)/core/layer1/filter/filter_types.cpp \
-    $(SRC)/core/layer1/filter/packet_filter.cpp
+    $(SRC)/core/layer1/filter/packet_filter.cpp \
+    $(SRC)/core/layer1/filter/predefined_filters.cpp
 
 STORAGE_SRCS := \
     $(SRC)/core/storage/packet_storage.cpp \
@@ -109,10 +110,12 @@ GUI_SRCS := \
     $(IFACE)/gui/widgets/packet_detail_widget.cpp \
     $(IFACE)/gui/widgets/packet_hex_widget.cpp \
     $(IFACE)/gui/widgets/filter_bar_widget.cpp \
+    $(IFACE)/gui/widgets/status_bar_widget.cpp \
     $(IFACE)/gui/models/packet_table_model.cpp \
     $(IFACE)/gui/dialogs/capture_dialog.cpp \
     $(IFACE)/gui/dialogs/preferences_dialog.cpp \
     $(IFACE)/gui/utils/color_rules.cpp
+
 
 CORE_SRCS := $(LAYER1_SRCS) $(STORAGE_SRCS)
 APP_SRCS  := $(CORE_SRCS) $(GUI_SRCS)
@@ -127,23 +130,54 @@ CORE_OBJS := $(LAYER1_OBJS) $(STORAGE_OBJS)
 APP_OBJS  := $(CORE_OBJS) $(GUI_OBJS)
 
 # ==================== MOC Files ====================
-MOC_HEADERS := \
-    $(IFACE)/gui/main_window.hpp \
-    $(IFACE)/gui/widgets/packet_list_widget.hpp \
-    $(IFACE)/gui/widgets/packet_detail_widget.hpp \
-    $(IFACE)/gui/widgets/packet_hex_widget.hpp \
-    $(IFACE)/gui/widgets/filter_bar_widget.hpp \
-    $(IFACE)/gui/models/packet_table_model.hpp \
-    $(IFACE)/gui/dialogs/capture_dialog.hpp \
-    $(IFACE)/gui/dialogs/preferences_dialog.hpp
+# Define each MOC file explicitly to avoid pattern matching issues
+MOC_MAIN_WINDOW_CPP        := $(BUILD)/moc/moc_main_window.cpp
+MOC_PACKET_LIST_CPP        := $(BUILD)/moc/moc_packet_list_widget.cpp
+MOC_PACKET_DETAIL_CPP      := $(BUILD)/moc/moc_packet_detail_widget.cpp
+MOC_PACKET_HEX_CPP         := $(BUILD)/moc/moc_packet_hex_widget.cpp
+MOC_FILTER_BAR_CPP         := $(BUILD)/moc/moc_filter_bar_widget.cpp
+MOC_STATUS_BAR_CPP         := $(BUILD)/moc/moc_status_bar_widget.cpp
+MOC_TABLE_MODEL_CPP        := $(BUILD)/moc/moc_packet_table_model.cpp
+MOC_CAPTURE_DIALOG_CPP     := $(BUILD)/moc/moc_capture_dialog.cpp
+MOC_PREFERENCES_DIALOG_CPP := $(BUILD)/moc/moc_preferences_dialog.cpp
 
-MOC_SRCS := $(patsubst $(IFACE)/gui/%.hpp,$(BUILD)/moc/moc_%.cpp,$(MOC_HEADERS))
-MOC_OBJS := $(patsubst $(BUILD)/moc/moc_%.cpp,$(OBJ)/moc/moc_%.o,$(MOC_SRCS))
+MOC_MAIN_WINDOW_OBJ        := $(OBJ)/moc/moc_main_window.o
+MOC_PACKET_LIST_OBJ        := $(OBJ)/moc/moc_packet_list_widget.o
+MOC_PACKET_DETAIL_OBJ      := $(OBJ)/moc/moc_packet_detail_widget.o
+MOC_PACKET_HEX_OBJ         := $(OBJ)/moc/moc_packet_hex_widget.o
+MOC_FILTER_BAR_OBJ         := $(OBJ)/moc/moc_filter_bar_widget.o
+MOC_STATUS_BAR_OBJ         := $(OBJ)/moc/moc_status_bar_widget.o
+MOC_TABLE_MODEL_OBJ        := $(OBJ)/moc/moc_packet_table_model.o
+MOC_CAPTURE_DIALOG_OBJ     := $(OBJ)/moc/moc_capture_dialog.o
+MOC_PREFERENCES_DIALOG_OBJ := $(OBJ)/moc/moc_preferences_dialog.o
+
+MOC_SRCS := \
+    $(MOC_MAIN_WINDOW_CPP) \
+    $(MOC_PACKET_LIST_CPP) \
+    $(MOC_PACKET_DETAIL_CPP) \
+    $(MOC_PACKET_HEX_CPP) \
+    $(MOC_FILTER_BAR_CPP) \
+    $(MOC_STATUS_BAR_CPP) \
+    $(MOC_TABLE_MODEL_CPP) \
+    $(MOC_CAPTURE_DIALOG_CPP) \
+    $(MOC_PREFERENCES_DIALOG_CPP)
+
+MOC_OBJS := \
+    $(MOC_MAIN_WINDOW_OBJ) \
+    $(MOC_PACKET_LIST_OBJ) \
+    $(MOC_PACKET_DETAIL_OBJ) \
+    $(MOC_PACKET_HEX_OBJ) \
+    $(MOC_FILTER_BAR_OBJ) \
+    $(MOC_STATUS_BAR_OBJ) \
+    $(MOC_TABLE_MODEL_OBJ) \
+    $(MOC_CAPTURE_DIALOG_OBJ) \
+    $(MOC_PREFERENCES_DIALOG_OBJ)
+
 
 COMMON_LIB := $(BUILD)/lib/libcommon.a
 
 # ==================== Main Targets ====================
-.PHONY: all clean run debug install help info check-qt
+.PHONY: all clean run debug install help info check-qt list-moc
 
 all: check-qt $(BIN)/$(TARGET)
 	@echo ""
@@ -207,32 +241,99 @@ $(OBJ)/gui/%.o: $(IFACE)/gui/%.cpp
 
 # ==================== MOC Rules ====================
 # Main window
-$(BUILD)/moc/moc_main_window.cpp: $(IFACE)/gui/main_window.hpp
-	@echo "→ MOC: $< → $@"
+$(MOC_MAIN_WINDOW_CPP): $(IFACE)/gui/main_window.hpp
+	@echo "→ MOC: main_window.hpp"
 	@mkdir -p $(BUILD)/moc
 	$(MOC) $< -o $@
 
 # Widgets
-$(BUILD)/moc/moc_%.cpp: $(IFACE)/gui/widgets/%.hpp
-	@echo "→ MOC [WIDGET]: $< → $@"
+$(MOC_PACKET_LIST_CPP): $(IFACE)/gui/widgets/packet_list_widget.hpp
+	@echo "→ MOC [WIDGET]: packet_list_widget.hpp"
 	@mkdir -p $(BUILD)/moc
 	$(MOC) $< -o $@
 
+$(MOC_PACKET_DETAIL_CPP): $(IFACE)/gui/widgets/packet_detail_widget.hpp
+	@echo "→ MOC [WIDGET]: packet_detail_widget.hpp"
+	@mkdir -p $(BUILD)/moc
+	$(MOC) $< -o $@
+
+$(MOC_PACKET_HEX_CPP): $(IFACE)/gui/widgets/packet_hex_widget.hpp
+	@echo "→ MOC [WIDGET]: packet_hex_widget.hpp"
+	@mkdir -p $(BUILD)/moc
+	$(MOC) $< -o $@
+
+$(MOC_FILTER_BAR_CPP): $(IFACE)/gui/widgets/filter_bar_widget.hpp
+	@echo "→ MOC [WIDGET]: filter_bar_widget.hpp"
+	@mkdir -p $(BUILD)/moc
+	$(MOC) $< -o $@
+
+# Status Bar Widget
+$(MOC_STATUS_BAR_CPP): $(IFACE)/gui/widgets/status_bar_widget.hpp
+	@echo "→ MOC [WIDGET]: status_bar_widget.hpp"
+	@mkdir -p $(BUILD)/moc
+	$(MOC) $< -o $@
+
+$(MOC_STATUS_BAR_OBJ): $(MOC_STATUS_BAR_CPP)
+	@echo "→ Compiling [MOC]: moc_status_bar_widget.cpp"
+	@mkdir -p $(OBJ)/moc
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+
 # Models
-$(BUILD)/moc/moc_%.cpp: $(IFACE)/gui/models/%.hpp
-	@echo "→ MOC [MODEL]: $< → $@"
+$(MOC_TABLE_MODEL_CPP): $(IFACE)/gui/models/packet_table_model.hpp
+	@echo "→ MOC [MODEL]: packet_table_model.hpp"
 	@mkdir -p $(BUILD)/moc
 	$(MOC) $< -o $@
 
 # Dialogs
-$(BUILD)/moc/moc_%.cpp: $(IFACE)/gui/dialogs/%.hpp
-	@echo "→ MOC [DIALOG]: $< → $@"
+$(MOC_CAPTURE_DIALOG_CPP): $(IFACE)/gui/dialogs/capture_dialog.hpp
+	@echo "→ MOC [DIALOG]: capture_dialog.hpp"
+	@mkdir -p $(BUILD)/moc
+	$(MOC) $< -o $@
+
+$(MOC_PREFERENCES_DIALOG_CPP): $(IFACE)/gui/dialogs/preferences_dialog.hpp
+	@echo "→ MOC [DIALOG]: preferences_dialog.hpp"
 	@mkdir -p $(BUILD)/moc
 	$(MOC) $< -o $@
 
 # Compile MOC generated files
-$(OBJ)/moc/moc_%.o: $(BUILD)/moc/moc_%.cpp
-	@echo "→ Compiling [MOC]: $<"
+$(MOC_MAIN_WINDOW_OBJ): $(MOC_MAIN_WINDOW_CPP)
+	@echo "→ Compiling [MOC]: moc_main_window.cpp"
+	@mkdir -p $(OBJ)/moc
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(MOC_PACKET_LIST_OBJ): $(MOC_PACKET_LIST_CPP)
+	@echo "→ Compiling [MOC]: moc_packet_list_widget.cpp"
+	@mkdir -p $(OBJ)/moc
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(MOC_PACKET_DETAIL_OBJ): $(MOC_PACKET_DETAIL_CPP)
+	@echo "→ Compiling [MOC]: moc_packet_detail_widget.cpp"
+	@mkdir -p $(OBJ)/moc
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(MOC_PACKET_HEX_OBJ): $(MOC_PACKET_HEX_CPP)
+	@echo "→ Compiling [MOC]: moc_packet_hex_widget.cpp"
+	@mkdir -p $(OBJ)/moc
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(MOC_FILTER_BAR_OBJ): $(MOC_FILTER_BAR_CPP)
+	@echo "→ Compiling [MOC]: moc_filter_bar_widget.cpp"
+	@mkdir -p $(OBJ)/moc
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(MOC_TABLE_MODEL_OBJ): $(MOC_TABLE_MODEL_CPP)
+	@echo "→ Compiling [MOC]: moc_packet_table_model.cpp"
+	@mkdir -p $(OBJ)/moc
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(MOC_CAPTURE_DIALOG_OBJ): $(MOC_CAPTURE_DIALOG_CPP)
+	@echo "→ Compiling [MOC]: moc_capture_dialog.cpp"
+	@mkdir -p $(OBJ)/moc
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(MOC_PREFERENCES_DIALOG_OBJ): $(MOC_PREFERENCES_DIALOG_CPP)
+	@echo "→ Compiling [MOC]: moc_preferences_dialog.cpp"
 	@mkdir -p $(OBJ)/moc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
@@ -255,6 +356,13 @@ install: all
 	sudo setcap cap_net_raw+ep /usr/local/bin/$(TARGET)
 	@echo "✓ Installation completed"
 
+list-moc:
+	@echo "MOC Source Files:"
+	@for src in $(MOC_SRCS); do echo "  $$src"; done
+	@echo ""
+	@echo "MOC Object Files:"
+	@for obj in $(MOC_OBJS); do echo "  $$obj"; done
+
 info:
 	@echo ""
 	@echo "╔════════════════════════════════════════╗"
@@ -271,7 +379,7 @@ info:
 	@echo "  Layer1:      $(words $(LAYER1_SRCS)) files"
 	@echo "  Storage:     $(words $(STORAGE_SRCS)) files"
 	@echo "  GUI:         $(words $(GUI_SRCS)) files"
-	@echo "  MOC Headers: $(words $(MOC_HEADERS)) files"
+	@echo "  MOC Files:   $(words $(MOC_SRCS)) files"
 	@echo ""
 
 help:
@@ -282,7 +390,8 @@ help:
 	@echo "  make clean    - Clean all"
 	@echo "  make install  - Install to system"
 	@echo "  make info     - Show build info"
+	@echo "  make list-moc - List MOC files"
 	@echo "  make check-qt - Check Qt configuration"
 
-.PRECIOUS: $(BUILD)/moc/moc_%.cpp
+.PRECIOUS: $(MOC_SRCS)
 .DELETE_ON_ERROR:

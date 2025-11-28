@@ -260,3 +260,287 @@
 [2025-11-26 15:52:34.425] [info] [84154] Loaded packets: 208940 displayed, 37197 hidden out of 246137 total
 [2025-11-26 15:52:48.179] [info] [84154] Application exiting with code: 0
 [2025-11-26 15:52:48.188] [info] [84154] AdvancedFilterManager destroyed
+[2025-11-26 16:26:09.981] [info] [22017] Starting Network Security AI GUI...
+[2025-11-26 16:26:09.981] [info] [22017] Qt Version: 6.9.2
+[2025-11-26 16:26:10.069] [info] [22017] AdvancedFilterManager created
+[2025-11-26 16:26:10.069] [info] [22017] MainWindow initialized
+[2025-11-26 16:26:10.074] [info] [22017] GUI initialized successfully
+[2025-11-26 16:26:17.175] [info] [22017] Display filter cleared
+[2025-11-26 16:26:17.175] [info] [22017] All packets and filters cleared
+[2025-11-26 16:26:17.175] [info] [22017] Display filter cleared
+[2025-11-26 16:26:17.176] [info] [22017] Building index for: /media/linhlinh/learn/nckh/NetworkSecurityAI/data/pcap/4SICS-GeekLounge-151020.pcap
+[2025-11-26 16:26:17.352] [info] [22017] Index built: 246137 packets
+[2025-11-26 16:26:17.354] [debug] [22017] Loading all packets (no filter)
+[2025-11-26 16:26:19.360] [info] [22017] Loaded all 246137 packets (no filter)
+[2025-11-26 16:26:21.255] [info] [22017] Loaded PCAP file: /media/linhlinh/learn/nckh/NetworkSecurityAI/data/pcap/4SICS-GeekLounge-151020.pcap (246137 packets)
+[2025-11-26 16:26:22.886] [info] [22017] Display filter set: tcp
+[2025-11-26 16:26:22.945] [debug] [22017] Loading packets with filter: 'tcp'
+[2025-11-26 16:26:24.888] [info] [22017] Filter result: 208940 displayed, 37197 hidden out of 246137 total
+[2025-11-26 16:26:24.888] [info] [22017] Filter 'tcp' applied: 208940/246137 packets (84.9%)
+[2025-11-26 16:26:27.038] [info] [22017] Display filter set: udp
+[2025-11-26 16:26:27.291] [debug] [22017] Loading packets with filter: 'udp'
+[2025-11-26 16:26:27.596] [info] [22017] Filter result: 27587 displayed, 218550 hidden out of 246137 total
+[2025-11-26 16:26:27.596] [info] [22017] Filter 'udp' applied: 27587/246137 packets (11.2%)
+[2025-11-26 16:26:29.724] [info] [22017] Display filter cleared
+[2025-11-26 16:26:29.773] [debug] [22017] Loading all packets (no filter)
+[2025-11-26 16:26:31.677] [info] [22017] Loaded all 246137 packets (no filter)
+[2025-11-26 16:26:31.677] [info] [22017] Filter cleared - Showing all 246137 packets
+[2025-11-26 16:26:33.997] [info] [22017] Application exiting with code: 0
+[2025-11-26 16:26:34.008] [info] [22017] AdvancedFilterManager destroyed
+[2025-11-26 20:38:58.505] [info] [25622] Starting Network Security AI GUI...
+[2025-11-26 20:38:58.505] [info] [25622] Qt Version: 6.9.2
+[2025-11-26 20:38:58.572] [info] [25622] AdvancedFilterManager created
+[2025-11-26 20:38:58.572] [info] [25622] MainWindow initialized
+[2025-11-26 20:38:58.576] [info] [25622] GUI initialized successfully
+[2025-11-26 20:39:02.513] [info] [25622] Display filter cleared
+[2025-11-26 20:39:02.513] [info] [25622] All packets and filters cleared
+[2025-11-26 20:39:02.513] [info] [25622] PacketIngress created for interface: wlan0
+[2025-11-26 20:39:02.513] [info] [25622] Successfully created pcap handle for wlan0
+[2025-11-26 20:39:02.513] [info] [25622] Buffer size set to 10485760 bytes (10 MB)
+[2025-11-26 20:39:02.513] [info] [25622] Activating pcap handle for wlan0...
+[2025-11-26 20:39:02.545] [info] [25622] Successfully opened interface: wlan0
+[2025-11-26 20:39:02.545] [debug] [25622] Hardware timestamping not available
+[2025-11-26 20:39:02.545] [debug] [25622] Hardware timestamping not available, using software timestamp
+[2025-11-26 20:39:02.545] [info] [25622] Datalink type: EN10MB (Ethernet)
+[2025-11-26 20:39:02.545] [info] [25622] PacketIngress initialized successfully for wlan0
+[2025-11-26 20:39:02.545] [info] [25622]   - Snaplen: 65535 bytes
+[2025-11-26 20:39:02.545] [info] [25622]   - Buffer: 10 MB
+[2025-11-26 20:39:02.545] [info] [25622]   - Promiscuous: enabled
+[2025-11-26 20:39:02.545] [info] [25622]   - Timeout: 1000 ms
+[2025-11-26 20:39:02.546] [info] [25622] Packet capture started on interface: wlan0
+[2025-11-26 20:39:02.546] [info] [25740] ========================================
+[2025-11-26 20:39:02.546] [info] [25740] Packet capture STARTED
+[2025-11-26 20:39:02.546] [info] [25740] Interface: wlan0
+[2025-11-26 20:39:02.546] [info] [25740] Start time: 1756-12-14 18:06:34.058
+[2025-11-26 20:39:02.546] [info] [25740] ========================================
+[2025-11-26 20:39:02.546] [debug] [25741] Capture loop started for wlan0
+[2025-11-26 20:39:14.336] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:39:14.338] [debug] [25622] Live mode filter: 73 displayed, 20 hidden
+[2025-11-26 20:39:14.338] [info] [25622] Filter 'tcp.port == 443' applied: 73/93 packets (78.5%)
+[2025-11-26 20:39:16.242] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:39:16.245] [debug] [25622] Live mode filter: 80 displayed, 20 hidden
+[2025-11-26 20:39:16.245] [info] [25622] Filter 'tcp.port == 443' applied: 80/100 packets (80.0%)
+[2025-11-26 20:39:31.891] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:39:31.895] [debug] [25622] Live mode filter: 123 displayed, 28 hidden
+[2025-11-26 20:39:31.895] [info] [25622] Filter 'tcp.port == 443' applied: 123/151 packets (81.5%)
+[2025-11-26 20:39:57.995] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:39:58.000] [debug] [25622] Live mode filter: 180 displayed, 34 hidden
+[2025-11-26 20:39:58.000] [info] [25622] Filter 'tcp.port == 443' applied: 180/214 packets (84.1%)
+[2025-11-26 20:39:58.171] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:39:58.176] [debug] [25622] Live mode filter: 180 displayed, 34 hidden
+[2025-11-26 20:39:58.176] [info] [25622] Filter 'tcp.port == 443' applied: 180/214 packets (84.1%)
+[2025-11-26 20:39:58.347] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:39:58.351] [debug] [25622] Live mode filter: 180 displayed, 34 hidden
+[2025-11-26 20:39:58.351] [info] [25622] Filter 'tcp.port == 443' applied: 180/214 packets (84.1%)
+[2025-11-26 20:39:58.523] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:39:58.528] [debug] [25622] Live mode filter: 180 displayed, 34 hidden
+[2025-11-26 20:39:58.528] [info] [25622] Filter 'tcp.port == 443' applied: 180/214 packets (84.1%)
+[2025-11-26 20:40:00.315] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:40:00.319] [debug] [25622] Live mode filter: 180 displayed, 34 hidden
+[2025-11-26 20:40:00.319] [info] [25622] Filter 'tcp.port == 443' applied: 180/214 packets (84.1%)
+[2025-11-26 20:40:01.004] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:40:01.033] [debug] [25622] Live mode filter: 187 displayed, 34 hidden
+[2025-11-26 20:40:01.033] [info] [25622] Filter 'tcp.port == 443' applied: 187/221 packets (84.6%)
+[2025-11-26 20:40:01.202] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:40:01.206] [debug] [25622] Live mode filter: 187 displayed, 34 hidden
+[2025-11-26 20:40:01.206] [info] [25622] Filter 'tcp.port == 443' applied: 187/221 packets (84.6%)
+[2025-11-26 20:40:02.426] [info] [25622] Stopping packet capture on wlan0...
+[2025-11-26 20:40:02.427] [debug] [25741] pcap_loop stopped by breakloop
+[2025-11-26 20:40:02.427] [debug] [25741] Capture loop ended for wlan0
+[2025-11-26 20:40:02.427] [info] [25622] ========================================
+[2025-11-26 20:40:02.427] [info] [25622] Packet capture STOPPED
+[2025-11-26 20:40:02.427] [info] [25622] Interface: wlan0
+[2025-11-26 20:40:02.427] [info] [25622] End time: 1756-12-15 10:44:35.124
+[2025-11-26 20:40:02.427] [info] [25622] Duration: 59 seconds
+[2025-11-26 20:40:02.427] [info] [25622] ----------------------------------------
+[2025-11-26 20:40:02.427] [info] [25622] Statistics:
+[2025-11-26 20:40:02.427] [info] [25622]   - Packets received: 222
+[2025-11-26 20:40:02.427] [info] [25622]   - Packets dropped: 0
+[2025-11-26 20:40:02.427] [info] [25622]   - Bytes received: 57518 (0.05 MB)
+[2025-11-26 20:40:02.427] [info] [25622]   - Errors: 0
+[2025-11-26 20:40:02.427] [info] [25622]   - Average rate: 3.77 packets/sec
+[2025-11-26 20:40:02.427] [info] [25622] ========================================
+[2025-11-26 20:40:02.480] [info] [25622] PacketIngress destroyed for interface: wlan0
+[2025-11-26 20:40:02.480] [info] [25622] Packet capture stopped
+[2025-11-26 20:40:07.083] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:40:07.086] [debug] [25622] Live mode filter: 188 displayed, 34 hidden
+[2025-11-26 20:40:07.086] [info] [25622] Filter 'tcp.port == 443' applied: 188/222 packets (84.7%)
+[2025-11-26 20:40:08.723] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:40:08.727] [debug] [25622] Live mode filter: 188 displayed, 34 hidden
+[2025-11-26 20:40:08.727] [info] [25622] Filter 'tcp.port == 443' applied: 188/222 packets (84.7%)
+[2025-11-26 20:40:34.664] [error] [25622] Failed to parse filter: Parse error at position 4: Unknown field: port
+[2025-11-26 20:42:42.797] [info] [25622] Display filter cleared
+[2025-11-26 20:42:42.798] [info] [25622] All packets and filters cleared
+[2025-11-26 20:42:42.798] [info] [25622] PacketIngress created for interface: wlan0
+[2025-11-26 20:42:42.799] [info] [25622] Successfully created pcap handle for wlan0
+[2025-11-26 20:42:42.799] [info] [25622] Buffer size set to 10485760 bytes (10 MB)
+[2025-11-26 20:42:42.799] [info] [25622] Activating pcap handle for wlan0...
+[2025-11-26 20:42:42.833] [info] [25622] Successfully opened interface: wlan0
+[2025-11-26 20:42:42.833] [debug] [25622] Hardware timestamping not available
+[2025-11-26 20:42:42.833] [debug] [25622] Hardware timestamping not available, using software timestamp
+[2025-11-26 20:42:42.833] [info] [25622] Datalink type: EN10MB (Ethernet)
+[2025-11-26 20:42:42.833] [info] [25622] PacketIngress initialized successfully for wlan0
+[2025-11-26 20:42:42.833] [info] [25622]   - Snaplen: 65535 bytes
+[2025-11-26 20:42:42.833] [info] [25622]   - Buffer: 10 MB
+[2025-11-26 20:42:42.833] [info] [25622]   - Promiscuous: enabled
+[2025-11-26 20:42:42.833] [info] [25622]   - Timeout: 1000 ms
+[2025-11-26 20:42:42.833] [info] [28582] ========================================
+[2025-11-26 20:42:42.833] [info] [28582] Packet capture STARTED
+[2025-11-26 20:42:42.833] [info] [28582] Interface: wlan0
+[2025-11-26 20:42:42.833] [info] [28582] Start time: 1756-12-17 07:18:01.455
+[2025-11-26 20:42:42.833] [info] [28582] ========================================
+[2025-11-26 20:42:42.833] [debug] [28583] Capture loop started for wlan0
+[2025-11-26 20:42:42.833] [info] [25622] Packet capture started on interface: wlan0
+[2025-11-26 20:43:01.791] [info] [25622] Stopping packet capture on wlan0...
+[2025-11-26 20:43:01.791] [debug] [28583] pcap_loop stopped by breakloop
+[2025-11-26 20:43:01.791] [debug] [28583] Capture loop ended for wlan0
+[2025-11-26 20:43:01.791] [info] [25622] ========================================
+[2025-11-26 20:43:01.791] [info] [25622] Packet capture STOPPED
+[2025-11-26 20:43:01.792] [info] [25622] Interface: wlan0
+[2025-11-26 20:43:01.792] [info] [25622] End time: 1756-12-17 12:33:59.768
+[2025-11-26 20:43:01.792] [info] [25622] Duration: 18 seconds
+[2025-11-26 20:43:01.792] [info] [25622] ----------------------------------------
+[2025-11-26 20:43:01.792] [info] [25622] Statistics:
+[2025-11-26 20:43:01.792] [info] [25622]   - Packets received: 1318
+[2025-11-26 20:43:01.792] [info] [25622]   - Packets dropped: 0
+[2025-11-26 20:43:01.792] [info] [25622]   - Bytes received: 1127485 (1.08 MB)
+[2025-11-26 20:43:01.792] [info] [25622]   - Errors: 0
+[2025-11-26 20:43:01.792] [info] [25622]   - Average rate: 71.13 packets/sec
+[2025-11-26 20:43:01.792] [info] [25622] ========================================
+[2025-11-26 20:43:01.844] [info] [25622] PacketIngress destroyed for interface: wlan0
+[2025-11-26 20:43:01.844] [info] [25622] Packet capture stopped
+[2025-11-26 20:43:08.627] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:43:08.637] [debug] [25622] Live mode filter: 628 displayed, 690 hidden
+[2025-11-26 20:43:08.637] [info] [25622] Filter 'tcp.port == 443' applied: 628/1318 packets (47.6%)
+[2025-11-26 20:43:20.959] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:43:20.970] [debug] [25622] Live mode filter: 628 displayed, 690 hidden
+[2025-11-26 20:43:20.970] [info] [25622] Filter 'tcp.port == 443' applied: 628/1318 packets (47.6%)
+[2025-11-26 20:43:23.935] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:43:23.946] [debug] [25622] Live mode filter: 628 displayed, 690 hidden
+[2025-11-26 20:43:23.946] [info] [25622] Filter 'tcp.port == 443' applied: 628/1318 packets (47.6%)
+[2025-11-26 20:44:12.792] [info] [25622] Display filter cleared
+[2025-11-26 20:44:12.809] [debug] [25622] Live mode: showing all 1318 packets
+[2025-11-26 20:44:12.809] [info] [25622] Filter cleared - Showing all 1318 packets
+[2025-11-26 20:44:30.509] [info] [25622] Display filter cleared
+[2025-11-26 20:44:30.512] [info] [25622] All packets and filters cleared
+[2025-11-26 20:44:30.512] [info] [25622] Display filter cleared
+[2025-11-26 20:44:30.514] [info] [25622] Building index for: /media/linhlinh/learn/nckh/NetworkSecurityAI/data/pcap/capture_20251125_161709.pcap
+[2025-11-26 20:44:30.519] [info] [25622] Index built: 4153 packets
+[2025-11-26 20:44:30.520] [debug] [25622] Loading all packets (no filter)
+[2025-11-26 20:44:30.556] [info] [25622] Loaded all 4153 packets (no filter)
+[2025-11-26 20:44:31.640] [info] [25622] Loaded PCAP file: /media/linhlinh/learn/nckh/NetworkSecurityAI/data/pcap/capture_20251125_161709.pcap (4153 packets)
+[2025-11-26 20:44:36.073] [info] [25622] Display filter set: tcp.port == 443
+[2025-11-26 20:44:36.077] [debug] [25622] Loading packets with filter: 'tcp.port == 443'
+[2025-11-26 20:44:36.113] [info] [25622] Filter result: 3694 displayed, 459 hidden out of 4153 total
+[2025-11-26 20:44:36.113] [info] [25622] Filter 'tcp.port == 443' applied: 3694/4153 packets (88.9%)
+[2025-11-26 20:48:53.821] [info] [25622] Display filter cleared
+[2025-11-26 20:48:53.828] [debug] [25622] Loading all packets (no filter)
+[2025-11-26 20:48:53.865] [info] [25622] Loaded all 4153 packets (no filter)
+[2025-11-26 20:48:53.865] [info] [25622] Filter cleared - Showing all 4153 packets
+[2025-11-26 20:49:25.519] [info] [25622] Application exiting with code: 0
+[2025-11-26 20:49:25.520] [info] [25622] AdvancedFilterManager destroyed
+[2025-11-26 21:35:07.392] [info] [66724] Starting Network Security AI GUI...
+[2025-11-26 21:35:07.392] [info] [66724] Qt Version: 6.9.2
+[2025-11-26 21:35:07.455] [info] [66724] AdvancedFilterManager created
+[2025-11-26 21:35:07.455] [info] [66724] MainWindow initialized
+[2025-11-26 21:35:07.459] [info] [66724] GUI initialized successfully
+[2025-11-26 21:35:08.650] [info] [66724] Display filter cleared
+[2025-11-26 21:35:08.650] [info] [66724] All packets and filters cleared
+[2025-11-26 21:35:08.650] [info] [66724] PacketIngress created for interface: wlan0
+[2025-11-26 21:35:08.651] [info] [66724] Successfully created pcap handle for wlan0
+[2025-11-26 21:35:08.651] [info] [66724] Buffer size set to 10485760 bytes (10 MB)
+[2025-11-26 21:35:08.651] [info] [66724] Activating pcap handle for wlan0...
+[2025-11-26 21:35:08.689] [info] [66724] Successfully opened interface: wlan0
+[2025-11-26 21:35:08.689] [debug] [66724] Hardware timestamping not available
+[2025-11-26 21:35:08.689] [debug] [66724] Hardware timestamping not available, using software timestamp
+[2025-11-26 21:35:08.689] [info] [66724] Datalink type: EN10MB (Ethernet)
+[2025-11-26 21:35:08.689] [info] [66724] PacketIngress initialized successfully for wlan0
+[2025-11-26 21:35:08.689] [info] [66724]   - Snaplen: 65535 bytes
+[2025-11-26 21:35:08.689] [info] [66724]   - Buffer: 10 MB
+[2025-11-26 21:35:08.689] [info] [66724]   - Promiscuous: enabled
+[2025-11-26 21:35:08.689] [info] [66724]   - Timeout: 1000 ms
+[2025-11-26 21:35:08.689] [info] [66785] ========================================
+[2025-11-26 21:35:08.689] [info] [66785] Packet capture STARTED
+[2025-11-26 21:35:08.689] [info] [66785] Interface: wlan0
+[2025-11-26 21:35:08.689] [info] [66785] Start time: 1757-01-22 17:08:57.394
+[2025-11-26 21:35:08.689] [info] [66785] ========================================
+[2025-11-26 21:35:08.689] [info] [66724] Packet capture started on interface: wlan0
+[2025-11-26 21:35:08.689] [debug] [66786] Capture loop started for wlan0
+[2025-11-26 21:35:12.962] [info] [66724] Display filter set: tcp
+[2025-11-26 21:35:12.964] [debug] [66724] Live mode filter: 53 displayed, 4 hidden
+[2025-11-26 21:35:12.964] [info] [66724] Filter 'tcp' applied: 53/57 packets (93.0%)
+[2025-11-26 21:35:16.849] [info] [66724] Display filter set: udp
+[2025-11-26 21:35:16.850] [debug] [66724] Live mode filter: 10 displayed, 111 hidden
+[2025-11-26 21:35:16.850] [info] [66724] Filter 'udp' applied: 10/121 packets (8.3%)
+[2025-11-26 21:35:19.225] [info] [66724] Display filter cleared
+[2025-11-26 21:35:19.227] [debug] [66724] Live mode: showing all 139 packets
+[2025-11-26 21:35:19.227] [info] [66724] Filter cleared - Showing all 139 packets
+[2025-11-26 21:35:23.440] [info] [66724] Stopping packet capture on wlan0...
+[2025-11-26 21:35:23.440] [debug] [66786] pcap_loop stopped by breakloop
+[2025-11-26 21:35:23.440] [debug] [66786] Capture loop ended for wlan0
+[2025-11-26 21:35:23.441] [info] [66724] ========================================
+[2025-11-26 21:35:23.441] [info] [66724] Packet capture STOPPED
+[2025-11-26 21:35:23.441] [info] [66724] Interface: wlan0
+[2025-11-26 21:35:23.441] [info] [66724] End time: 1757-01-22 21:14:48.973
+[2025-11-26 21:35:23.441] [info] [66724] Duration: 14 seconds
+[2025-11-26 21:35:23.441] [info] [66724] ----------------------------------------
+[2025-11-26 21:35:23.441] [info] [66724] Statistics:
+[2025-11-26 21:35:23.441] [info] [66724]   - Packets received: 171
+[2025-11-26 21:35:23.441] [info] [66724]   - Packets dropped: 0
+[2025-11-26 21:35:23.441] [info] [66724]   - Bytes received: 58958 (0.06 MB)
+[2025-11-26 21:35:23.441] [info] [66724]   - Errors: 0
+[2025-11-26 21:35:23.441] [info] [66724]   - Average rate: 11.85 packets/sec
+[2025-11-26 21:35:23.441] [info] [66724] ========================================
+[2025-11-26 21:35:23.523] [info] [66724] PacketIngress destroyed for interface: wlan0
+[2025-11-26 21:35:23.524] [info] [66724] Packet capture stopped
+[2025-11-26 21:35:38.415] [info] [66724] Application exiting with code: 0
+[2025-11-26 21:35:38.415] [info] [66724] AdvancedFilterManager destroyed
+[2025-11-27 07:34:50.627] [info] [7717] Starting Network Security AI GUI...
+[2025-11-27 07:34:50.627] [info] [7717] Qt Version: 6.9.2
+[2025-11-27 07:34:50.735] [info] [7717] AdvancedFilterManager created
+[2025-11-27 07:34:50.735] [info] [7717] MainWindow initialized
+[2025-11-27 07:34:50.739] [info] [7717] GUI initialized successfully
+[2025-11-27 07:35:08.758] [info] [7717] Display filter cleared
+[2025-11-27 07:35:08.758] [info] [7717] All packets and filters cleared
+[2025-11-27 07:35:08.758] [info] [7717] PacketIngress created for interface: wlan0
+[2025-11-27 07:35:08.758] [info] [7717] Successfully created pcap handle for wlan0
+[2025-11-27 07:35:08.758] [info] [7717] Buffer size set to 10485760 bytes (10 MB)
+[2025-11-27 07:35:08.758] [info] [7717] Activating pcap handle for wlan0...
+[2025-11-27 07:35:08.787] [info] [7717] Successfully opened interface: wlan0
+[2025-11-27 07:35:08.787] [debug] [7717] Hardware timestamping not available
+[2025-11-27 07:35:08.787] [debug] [7717] Hardware timestamping not available, using software timestamp
+[2025-11-27 07:35:08.787] [info] [7717] Datalink type: EN10MB (Ethernet)
+[2025-11-27 07:35:08.787] [info] [7717] PacketIngress initialized successfully for wlan0
+[2025-11-27 07:35:08.787] [info] [7717]   - Snaplen: 65535 bytes
+[2025-11-27 07:35:08.787] [info] [7717]   - Buffer: 10 MB
+[2025-11-27 07:35:08.787] [info] [7717]   - Promiscuous: enabled
+[2025-11-27 07:35:08.787] [info] [7717]   - Timeout: 1000 ms
+[2025-11-27 07:35:08.788] [info] [7717] Packet capture started on interface: wlan0
+[2025-11-27 07:35:08.813] [info] [8244] ========================================
+[2025-11-27 07:35:08.813] [info] [8244] Packet capture STARTED
+[2025-11-27 07:35:08.813] [info] [8244] Interface: wlan0
+[2025-11-27 07:35:08.813] [info] [8244] Start time: 1758-03-15 09:11:00.850
+[2025-11-27 07:35:08.813] [info] [8244] ========================================
+[2025-11-27 07:35:08.813] [debug] [8245] Capture loop started for wlan0
+[2025-11-27 07:38:17.937] [info] [8245] [wlan0] Packets: 10000 | Dropped: 0 | Rate: 52.88 pps | Bytes: 8.37 MB
+[2025-11-27 07:38:46.101] [info] [8245] [wlan0] Packets: 20000 | Dropped: 0 | Rate: 92.04 pps | Bytes: 18.00 MB
+[2025-11-27 07:40:48.071] [info] [7717] Application exiting with code: 0
+[2025-11-27 07:40:48.072] [info] [7717] Stopping packet capture on wlan0...
+[2025-11-27 07:40:48.072] [debug] [8245] pcap_loop stopped by breakloop
+[2025-11-27 07:40:48.072] [debug] [8245] Capture loop ended for wlan0
+[2025-11-27 07:40:48.072] [info] [7717] ========================================
+[2025-11-27 07:40:48.072] [info] [7717] Packet capture STOPPED
+[2025-11-27 07:40:48.072] [info] [7717] Interface: wlan0
+[2025-11-27 07:40:48.072] [info] [7717] End time: 1758-03-19 07:25:20.129
+[2025-11-27 07:40:48.072] [info] [7717] Duration: 339 seconds
+[2025-11-27 07:40:48.072] [info] [7717] ----------------------------------------
+[2025-11-27 07:40:48.072] [info] [7717] Statistics:
+[2025-11-27 07:40:48.072] [info] [7717]   - Packets received: 22569
+[2025-11-27 07:40:48.072] [info] [7717]   - Packets dropped: 0
+[2025-11-27 07:40:48.072] [info] [7717]   - Bytes received: 21534644 (20.54 MB)
+[2025-11-27 07:40:48.072] [info] [7717]   - Errors: 0
+[2025-11-27 07:40:48.072] [info] [7717]   - Average rate: 74.96 packets/sec
+[2025-11-27 07:40:48.072] [info] [7717] ========================================
+[2025-11-27 07:40:48.158] [info] [7717] PacketIngress destroyed for interface: wlan0
+[2025-11-27 07:40:48.160] [info] [7717] Packet capture stopped
+[2025-11-27 07:40:48.170] [info] [7717] AdvancedFilterManager destroyed

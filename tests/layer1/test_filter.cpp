@@ -541,8 +541,8 @@ int main(int argc, char* argv[]) {
     
     // Run tests if requested
     if (run_tests) {
-        // testBasicFilters();
-        // testInvalidFilters();
+        testBasicFilters();
+        testInvalidFilters();
         displayPresets();
         displayFilterSuggestions();
         displayFilterBuilder();

@@ -381,9 +381,9 @@ void MainWindow::onStartCapture()
         return;
     }
     
-    // Switch to live mode
-    m_is_file_mode = false;
+    // Clear filter and switch to live mode
     onClearPackets();
+    m_is_file_mode = false;
     
     QString interface = m_interfaceCombo->currentData().toString();
     if (interface.isEmpty()) {
@@ -418,7 +418,8 @@ void MainWindow::onStartCapture()
         m_storage = std::make_unique<PacketStorage>(storageConfig);
         
         if (!m_storage->initialize()) {
-            QMessageBox::warning(this, "Warning", "Failed to initialize storage. Continuing without saving.");
+            QMessageBox::warning(this, "Warning", 
+                "Failed to initialize storage. Continuing without saving.");
             m_storage.reset();
         }
     }
@@ -497,23 +498,44 @@ void MainWindow::onPauseCapture()
 
 void MainWindow::onClearPackets()
 {
-    std::lock_guard<std::mutex> lock(m_packets_mutex);
-    m_packets.clear();
+    // Clear filter first
+    m_filterEdit->clear();
+    m_quickFilterCombo->blockSignals(true);
+    m_quickFilterCombo->setCurrentIndex(0);
+    m_quickFilterCombo->blockSignals(false);
+    
+    if (m_filter_manager) {
+        m_filter_manager->clearDisplayFilter();
+    }
+    
+    // Clear packets
+    {
+        std::lock_guard<std::mutex> lock(m_packets_mutex);
+        m_packets.clear();
+    }
+    
     m_packetTable->setRowCount(0);
     m_detailText->clear();
     
+    // Reset counters
     m_total_packets.store(0);
     m_matched_packets.store(0);
     m_filtered_packets.store(0);
     m_total_bytes.store(0);
     
+    // Clear file mode
     if (m_is_file_mode) {
         m_index_manager->clear();
         m_is_file_mode = false;
     }
     
+    // Update UI
     updateStatistics();
+    m_statusLabel->setText("Ready");
+    
+    spdlog::info("All packets and filters cleared");
 }
+
 
 void MainWindow::onSavePackets()
 {
@@ -608,6 +630,26 @@ void MainWindow::onSavePackets()
     }
 }
 
+void MainWindow::resetFilter()
+{
+    // Clear UI
+    m_filterEdit->clear();
+    m_quickFilterCombo->blockSignals(true);
+    m_quickFilterCombo->setCurrentIndex(0);
+    m_quickFilterCombo->blockSignals(false);
+    
+    // Clear filter manager
+    if (m_filter_manager) {
+        m_filter_manager->clearDisplayFilter();
+    }
+    
+    // Reset counters to show all
+    size_t total = m_total_packets.load();
+    m_matched_packets.store(total);
+    m_filtered_packets.store(0);
+    
+    spdlog::info("Filter reset - all counters cleared");
+}
 // ==================== Filter Control Slots ====================
 
 void MainWindow::onApplyFilter()
@@ -619,80 +661,85 @@ void MainWindow::onApplyFilter()
         return;
     }
     
-    if (!isValidFilter(filterText.toStdString())) {
-        QMessageBox::warning(this, "Invalid Filter",
-            QString("The filter expression '%1' is not supported.\n\n"
-                   "Click 'Help' button to see supported syntax.")
-            .arg(filterText));
-        return;
-    }
-
     try {
         // Set filter in manager
         if (!m_filter_manager->setDisplayFilter(filterText.toStdString())) {
-            QMessageBox::critical(this, "Filter Error", "Invalid filter expression!");
+            QMessageBox::critical(this, "Filter Error", 
+                "Failed to set filter. Please check syntax.");
             return;
         }
         
         // Apply filter based on mode
         if (m_is_file_mode) {
-            // File mode: Use lightweight filter on index
             loadVisiblePackets();
         } else {
-            // Live mode: Filter existing packets in memory
             updatePacketTable();
         }
         
-        // Update status with correct counts
+        // Update status
         size_t matched = m_matched_packets.load();
         size_t total = m_total_packets.load();
         double match_rate = total > 0 ? (matched * 100.0 / total) : 0.0;
         
-        m_statusLabel->setText(QString("Filter applied: %1 (showing %2/%3 packets, %4%)")
+        m_statusLabel->setText(QString("Filter: %1 | Showing %2/%3 (%4%)")
                               .arg(filterText)
                               .arg(matched)
                               .arg(total)
                               .arg(match_rate, 0, 'f', 1));
         
-        spdlog::info("Filter applied: {} - Mode: {} - Showing {}/{} packets ({:.1f}%)", 
-                    filterText.toStdString(),
-                    m_is_file_mode ? "file" : "live",
-                    matched,
-                    total,
-                    match_rate);
+        spdlog::info("Filter '{}' applied: {}/{} packets ({:.1f}%)", 
+                    filterText.toStdString(), matched, total, match_rate);
         
     } catch (const std::exception &e) {
         QMessageBox::critical(this, "Filter Error", 
-                             QString("Invalid filter expression:\n%1").arg(e.what()));
+                             QString("Error applying filter:\n%1").arg(e.what()));
         spdlog::error("Filter error: {}", e.what());
     }
 }
 
+
 void MainWindow::onClearFilter()
 {
+    // Clear UI elements
     m_filterEdit->clear();
+    m_quickFilterCombo->blockSignals(true);  // Prevent recursive call
     m_quickFilterCombo->setCurrentIndex(0);
+    m_quickFilterCombo->blockSignals(false);
     
+    // Clear filter in manager
+    if (m_filter_manager) {
+        m_filter_manager->clearDisplayFilter();
+    }
+    
+    // Reset counters
+    size_t total = m_total_packets.load();
+    m_matched_packets.store(total);
+    m_filtered_packets.store(0);
+    
+    // Reload packets based on mode
     if (m_is_file_mode) {
         loadVisiblePackets();
     } else {
         updatePacketTable();
     }
     
-    updatePacketTable();
-    
+    // Update status
     m_statusLabel->setText(QString("Filter cleared - Showing all %1 packets")
                           .arg(m_total_packets.load()));
+    
+    spdlog::info("Filter cleared - Showing all {} packets", m_total_packets.load());
 }
 
 void MainWindow::onQuickFilter(const QString &text)
 {
-    if (text == "None") {
+    // Handle "None" selection - clear filter
+    if (text == "None" || text.isEmpty()) {
         m_filterEdit->clear();
         onClearFilter();
         return;
     }
     
+    // Map quick filter to expression
     QString filter;
     if (text == "TCP") {
         filter = "tcp";
@@ -712,9 +759,12 @@ void MainWindow::onQuickFilter(const QString &text)
         filter = "tcp.port == 22";
     }
     
-    m_filterEdit->setText(filter);
-    onApplyFilter();
+    if (!filter.isEmpty()) {
+        m_filterEdit->setText(filter);
+        onApplyFilter();
+    }
 }
+
 
 // ==================== File Operations ====================
 
@@ -727,8 +777,18 @@ void MainWindow::onLoadPcap()
         return;
     }
     
-    // Clear current data
+    // Clear current data and filter
     onClearPackets();
+    
+    // Clear filter UI and manager
+    m_filterEdit->clear();
+    m_quickFilterCombo->blockSignals(true);
+    m_quickFilterCombo->setCurrentIndex(0);
+    m_quickFilterCombo->blockSignals(false);
+    
+    if (m_filter_manager) {
+        m_filter_manager->clearDisplayFilter();
+    }
     
     // Build index with progress dialog
     QProgressDialog progress("Building packet index...", "Cancel", 0, 0, this);
@@ -746,21 +806,25 @@ void MainWindow::onLoadPcap()
     
     // Switch to file mode
     m_is_file_mode = true;
-    m_total_packets.store(m_index_manager->getPacketCount());
+    size_t packet_count = m_index_manager->getPacketCount();
+    m_total_packets.store(packet_count);
+    m_matched_packets.store(packet_count);  // Initially show all
+    m_filtered_packets.store(0);
     
-    // Load visible packets
+    // Load all packets (no filter)
     loadVisiblePackets();
     
     QMessageBox::information(this, "Success", 
                             QString("Loaded %1 packets from:\n%2")
-                            .arg(m_index_manager->getPacketCount())
+                            .arg(packet_count)
                             .arg(filename));
     
-    m_statusLabel->setText(QString("Loaded %1 packets (indexed mode)").arg(m_total_packets.load()));
+    m_statusLabel->setText(QString("Loaded %1 packets from file")
+                          .arg(packet_count));
     
     spdlog::info("Loaded PCAP file: {} ({} packets)", 
                  filename.toStdString(), 
-                 m_index_manager->getPacketCount());
+                 packet_count);
 }
 
 void MainWindow::onAbout()
@@ -828,9 +892,9 @@ void MainWindow::updateStatistics()
     size_t total = m_total_packets.load();
     double match_rate = total > 0 ? (matched * 100.0 / total) : 0.0;
     
-    m_matchedPacketsLabel->setText(QString("Displayed: %1 (%.1f%%)")
+    m_matchedPacketsLabel->setText(QString("Displayed: %1 (%2%)")
                                    .arg(matched)
-                                   .arg(match_rate, 0, 'f', 1));
+                                   .arg(QString::number(match_rate, 'f', 1)));
     
     // Hidden packets
     m_filteredPacketsLabel->setText(QString("Hidden: %1")
@@ -861,33 +925,55 @@ void MainWindow::updateStatistics()
 
 void MainWindow::updatePacketTable()
 {
+    if (m_is_file_mode) {
+        // File mode: delegate to loadVisiblePackets
+        loadVisiblePackets();
+        return;
+    }
+    
+    // Live mode: filter packets in memory
     m_packetTable->setRowCount(0);
     
-    if (m_is_file_mode) {
-        loadVisiblePackets();
-    } else {
-        // Live mode - filter existing packets
-        std::lock_guard<std::mutex> lock(m_packets_mutex);
+    std::lock_guard<std::mutex> lock(m_packets_mutex);
+    
+    size_t displayed = 0;
+    size_t hidden = 0;
+    
+    // Get current filter
+    std::string current_filter;
+    bool has_filter = false;
+    
+    if (m_filter_manager) {
+        auto stats = m_filter_manager->getStats();
+        current_filter = stats.current_filter;
+        has_filter = !current_filter.empty();
+    }
+    
+    // Filter packets
+    for (size_t i = 0; i < m_packets.size(); i++) {
+        bool should_display = true;
         
-        size_t displayed = 0;
-        for (size_t i = 0; i < m_packets.size(); i++) {
-            bool should_display = true;
-            
-            if (m_filter_manager) {
-                auto stats = m_filter_manager->getStats();
-                if (!stats.current_filter.empty()) {
-                    should_display = m_filter_manager->matchesDisplayFilter(m_packets[i]);
-                }
-            }
-            
-            if (should_display) {
-                addLivePacketToTable(m_packets[i], i + 1);
-                displayed++;
-            }
+        // Apply filter only if exists
+        if (has_filter && m_filter_manager) {
+            should_display = m_filter_manager->matchesDisplayFilter(m_packets[i]);
         }
         
-        m_matched_packets.store(displayed);
-        m_filtered_packets.store(m_packets.size() - displayed);
+        if (should_display) {
+            addLivePacketToTable(m_packets[i], i + 1);
+            displayed++;
+        } else {
+            hidden++;
+        }
+    }
+    
+    // Update counters
+    m_matched_packets.store(displayed);
+    m_filtered_packets.store(hidden);
+    
+    if (has_filter) {
+        spdlog::debug("Live mode filter: {} displayed, {} hidden", displayed, hidden);
+    } else {
+        spdlog::debug("Live mode: showing all {} packets", displayed);
     }
 }
 
@@ -903,12 +989,19 @@ void MainWindow::loadVisiblePackets()
     
     // Get current filter
     std::string current_filter;
+    bool has_filter = false;
+    
     if (m_filter_manager) {
         auto stats = m_filter_manager->getStats();
         current_filter = stats.current_filter;
+        has_filter = !current_filter.empty();
     }
     
-    spdlog::debug("Loading packets with filter: '{}'", current_filter);
+    if (has_filter) {
+        spdlog::debug("Loading packets with filter: '{}'", current_filter);
+    } else {
+        spdlog::debug("Loading all packets (no filter)");
+    }
     
     // Load and filter packets
     for (size_t i = 0; i < total; i++) {
@@ -917,8 +1010,8 @@ void MainWindow::loadVisiblePackets()
         
         bool should_display = true;
         
-        // Apply lightweight filter on PacketIndex
-        if (!current_filter.empty()) {
+        // Apply lightweight filter only if filter exists
+        if (has_filter) {
             should_display = m_index_manager->matchesSimpleFilter(i, current_filter);
         }
         
@@ -934,10 +1027,13 @@ void MainWindow::loadVisiblePackets()
     m_matched_packets.store(displayed);
     m_filtered_packets.store(hidden);
     
-    spdlog::info("Loaded packets: {} displayed, {} hidden out of {} total", 
-                 displayed, hidden, total);
+    if (has_filter) {
+        spdlog::info("Filter result: {} displayed, {} hidden out of {} total", 
+                     displayed, hidden, total);
+    } else {
+        spdlog::info("Loaded all {} packets (no filter)", displayed);
+    }
 }
-
 void MainWindow::addPacketToTable(const PacketIndex* index, size_t packet_num)
 {
     int row = m_packetTable->rowCount();

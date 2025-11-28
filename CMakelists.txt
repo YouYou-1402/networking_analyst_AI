@@ -1,0 +1,189 @@
+# CMakeLists.txt
+
+cmake_minimum_required(VERSION 3.16)
+project(NetworkSecurityAnalyzer VERSION 1.0.0 LANGUAGES CXX)
+
+# ==================== C++ Standard ====================
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# ==================== Build Type ====================
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
+# ==================== Compiler Flags ====================
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 -DDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
+
+# ==================== Qt Configuration ====================
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+find_package(Qt5 REQUIRED COMPONENTS
+    Core
+    Widgets
+    Network
+    Gui
+)
+
+# ==================== Dependencies ====================
+
+# Threads
+find_package(Threads REQUIRED)
+
+# PCAP
+find_library(PCAP_LIBRARY pcap REQUIRED)
+if(NOT PCAP_LIBRARY)
+    message(FATAL_ERROR "libpcap not found. Install with: sudo apt-get install libpcap-dev")
+endif()
+message(STATUS "Found libpcap: ${PCAP_LIBRARY}")
+
+# spdlog
+find_package(spdlog REQUIRED)
+if(NOT spdlog_FOUND)
+    message(STATUS "spdlog not found, using FetchContent")
+    include(FetchContent)
+    FetchContent_Declare(
+        spdlog
+        GIT_REPOSITORY https://github.com/gabime/spdlog.git
+        GIT_TAG v1.12.0
+    )
+    FetchContent_MakeAvailable(spdlog)
+endif()
+
+# nlohmann_json
+find_package(nlohmann_json 3.2.0)
+if(NOT nlohmann_json_FOUND)
+    message(STATUS "nlohmann_json not found, using FetchContent")
+    include(FetchContent)
+    FetchContent_Declare(
+        json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.11.2
+    )
+    FetchContent_MakeAvailable(json)
+endif()
+
+# ==================== Include Directories ====================
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/layer1
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/layer1/filter
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gui
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/widgets
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/models
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/dialogs
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/utils
+)
+
+# ==================== Source Files ====================
+
+# Common sources
+set(COMMON_SOURCES
+    src/common/packet_parser.cpp
+    src/common/utils.cpp
+)
+
+# Core Layer1 sources
+set(LAYER1_SOURCES
+    src/core/layer1/packet_ingress.cpp
+    src/core/layer1/filter/filter_parser.cpp
+    src/core/layer1/filter/filter_expression.cpp
+    src/core/layer1/filter/filter_field_evaluator.cpp
+    src/core/layer1/filter/packet_filter.cpp
+    src/core/layer1/filter/predefined_filters.cpp
+)
+
+# GUI sources
+set(GUI_SOURCES
+    src/gui/main_window.cpp
+    src/gui/widgets/packet_list_widget.cpp
+    src/gui/widgets/packet_detail_widget.cpp
+    src/gui/widgets/packet_hex_widget.cpp
+    src/gui/widgets/filter_bar_widget.cpp
+    src/gui/widgets/status_bar_widget.cpp
+    src/gui/models/packet_table_model.cpp
+    src/gui/dialogs/capture_dialog.cpp
+    src/gui/dialogs/preferences_dialog.cpp
+    src/gui/utils/color_rules.cpp
+)
+
+# Main entry point
+set(MAIN_SOURCE
+    src/gui/main.cpp
+)
+
+# ==================== Executable ====================
+add_executable(${PROJECT_NAME}
+    ${MAIN_SOURCE}
+    ${COMMON_SOURCES}
+    ${LAYER1_SOURCES}
+    ${GUI_SOURCES}
+)
+
+# ==================== Link Libraries ====================
+target_link_libraries(${PROJECT_NAME}
+    Qt5::Core
+    Qt5::Widgets
+    Qt5::Network
+    Qt5::Gui
+    ${PCAP_LIBRARY}
+    spdlog::spdlog
+    nlohmann_json::nlohmann_json
+    Threads::Threads
+    cap  # For capabilities
+)
+
+# ==================== Installation ====================
+install(TARGETS ${PROJECT_NAME}
+    RUNTIME DESTINATION bin
+)
+
+# Install desktop file (Linux)
+if(UNIX AND NOT APPLE)
+    install(FILES resources/network-security-analyzer.desktop
+        DESTINATION share/applications
+    )
+    install(FILES resources/icon.png
+        DESTINATION share/icons/hicolor/256x256/apps
+        RENAME network-security-analyzer.png
+    )
+endif()
+
+# ==================== Testing ====================
+option(BUILD_TESTS "Build tests" OFF)
+
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+# ==================== Documentation ====================
+option(BUILD_DOCS "Build documentation" OFF)
+
+if(BUILD_DOCS)
+    find_package(Doxygen)
+    if(DOXYGEN_FOUND)
+        add_subdirectory(docs)
+    endif()
+endif()
+
+# ==================== Summary ====================
+message(STATUS "")
+message(STATUS "========================================")
+message(STATUS "  Network Security Analyzer")
+message(STATUS "========================================")
+message(STATUS "  Version: ${PROJECT_VERSION}")
+message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "  C++ standard: ${CMAKE_CXX_STANDARD}")
+message(STATUS "  Qt version: ${Qt5_VERSION}")
+message(STATUS "  Install prefix: ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "========================================")
+message(STATUS "")
