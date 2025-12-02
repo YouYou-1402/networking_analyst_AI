@@ -6,10 +6,14 @@
 #include <QWidget>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
+#include <QTextEdit>
+#include <QSplitter>
 #include <QMenu>
 #include <QAction>
 #include <QVBoxLayout>
 #include <QHeaderView>
+#include <QTextCharFormat>
+#include <QTextCursor>
 #include <memory>
 
 #include "common/packet_parser.hpp"
@@ -19,9 +23,46 @@ namespace NetworkSecurity
     namespace GUI
     {
         /**
-         * @brief Packet details tree widget (Wireshark-style)
-         * 
-         * Displays hierarchical packet structure with expandable protocol layers
+         * @brief Custom QTextEdit for hex dump display with highlighting
+         */
+        class HexDumpWidget : public QTextEdit
+        {
+            Q_OBJECT
+
+        public:
+            explicit HexDumpWidget(QWidget* parent = nullptr);
+            
+            void setRawData(const std::vector<uint8_t>& data);
+            void clearData();
+            void highlightBytes(int offset, int length);
+            void clearHighlight();
+            
+        protected:
+            void mouseMoveEvent(QMouseEvent* event) override;
+            void leaveEvent(QEvent* event) override;
+            
+        signals:
+            void bytesHovered(int offset, int length);
+            
+        private:
+            void buildHexDump();
+            int getOffsetAtPosition(const QPoint& pos);
+            void updateHoverHighlight(int offset);
+            
+            std::vector<uint8_t> raw_data_;
+            int highlighted_offset_;
+            int highlighted_length_;
+            int hover_offset_;
+            
+            QTextCharFormat normal_format_;
+            QTextCharFormat highlight_format_;
+            QTextCharFormat hover_format_;
+            
+            static constexpr int BYTES_PER_LINE = 16;
+        };
+
+        /**
+         * @brief Packet details widget with split view (Tree + Hex dump)
          */
         class PacketDetailWidget : public QWidget
         {
@@ -44,11 +85,6 @@ namespace NetworkSecurity
             void collapseItem(QTreeWidgetItem* item);
             void expandProtocol(const QString& protocol);
             void collapseProtocol(const QString& protocol);
-            void addHexDumpItem(QTreeWidgetItem* parent,
-                                               const QString& name,
-                                               const uint8_t* data,
-                                               size_t length,
-                                               int offset);
                                              
             // ==================== Selection ====================
             QByteArray getSelectedBytes() const;
@@ -68,7 +104,8 @@ namespace NetworkSecurity
             bool isShowHexData() const;
             void setAutoExpand(bool expand);
             bool isAutoExpand() const;
-            void exportItemToText(QTextStream& out, QTreeWidgetItem* item, int indent) const;
+            void setSplitterRatio(double ratio); // 0.0 - 1.0
+            
         signals:
             void bytesSelected(int offset, int length);
             void fieldSelected(const QString& field, const QString& value);
@@ -86,6 +123,8 @@ namespace NetworkSecurity
             void onItemCollapsed(QTreeWidgetItem* item);
             void onItemContextMenu(const QPoint& pos);
             void onItemSelectionChanged();
+            void onTreeItemHovered(QTreeWidgetItem* item, int column);
+            void onHexBytesHovered(int offset, int length);
             
             // Context menu actions
             void onExpandAll();
@@ -114,6 +153,8 @@ namespace NetworkSecurity
             // ==================== UI Setup ====================
             void setupUI();
             void setupTreeWidget();
+            void setupHexWidget();
+            void setupSplitter();
             void setupContextMenu();
             void applyWiresharkStyle();
             
@@ -154,6 +195,11 @@ namespace NetworkSecurity
                                int bit_length,
                                int byte_offset);
             
+            void addHexDumpItem(QTreeWidgetItem* parent,
+                              const QString& name,
+                              const uint8_t* data,
+                              size_t length,
+                              int offset);
 
             // ==================== Formatting ====================
             QString formatBytes(const uint8_t* data, size_t length, bool with_ascii = false) const;
@@ -175,16 +221,13 @@ namespace NetworkSecurity
             QString getEtherTypeString(uint16_t ether_type) const;
             QString getIPProtocolString(uint8_t protocol) const;
             
-            // ==================== Offset Calculation ====================
-            int calculateEthernetOffset() const;
-            int calculateIPv4Offset() const;
-            int calculateIPv6Offset() const;
-            int calculateTCPOffset() const;
-            int calculateUDPOffset() const;
-            int calculatePayloadOffset() const;
+            // ==================== Export ====================
+            void exportItemToText(QTextStream& out, QTreeWidgetItem* item, int indent) const;
             
             // ==================== UI Components ====================
+            QSplitter* splitter_;
             QTreeWidget* tree_widget_;
+            HexDumpWidget* hex_widget_;
             
             // Context menus
             QMenu* context_menu_;
@@ -222,7 +265,7 @@ namespace NetworkSecurity
             
             // ==================== Data ====================
             const Common::ParsedPacket* current_packet_;
-            const std::vector<uint8_t>* current_raw_data_;
+            std::vector<uint8_t> current_raw_data_;
             QTreeWidgetItem* selected_item_;
             
             // Settings

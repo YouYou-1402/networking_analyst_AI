@@ -2,6 +2,7 @@
 
 #include "packet_detail_widget.hpp"
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QHeaderView>
 #include <QApplication>
 #include <QClipboard>
@@ -9,6 +10,11 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QTextStream>
+#include <QScrollBar>
+#include <QToolTip>
+#include <QPainter>
+#include <QTextBlock>
+#include <QMouseEvent>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <spdlog/spdlog.h>
@@ -17,18 +23,257 @@ namespace NetworkSecurity
 {
     namespace GUI
     {
-        // ==================== Constructor & Destructor ====================
+        // ==================== HexDumpWidget Implementation ====================
+
+        HexDumpWidget::HexDumpWidget(QWidget* parent)
+            : QTextEdit(parent)
+            , highlighted_offset_(-1)
+            , highlighted_length_(0)
+            , hover_offset_(-1)
+        {
+            setReadOnly(true);
+            setLineWrapMode(QTextEdit::NoWrap);
+            setFont(QFont("Consolas", 9));
+            setMouseTracking(true);
+            
+            // Setup formats
+            normal_format_.setBackground(Qt::white);
+            normal_format_.setForeground(Qt::black);
+            
+            highlight_format_.setBackground(QColor(180, 213, 254)); // Light blue
+            highlight_format_.setForeground(Qt::black);
+            highlight_format_.setFontWeight(QFont::Bold);
+            
+            hover_format_.setBackground(QColor(229, 243, 255)); // Very light blue
+            hover_format_.setForeground(Qt::black);
+            
+            setStyleSheet(
+                "QTextEdit {"
+                "    background-color: #FFFFFF;"
+                "    color: #000000;"
+                "    border: 1px solid #C0C0C0;"
+                "    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;"
+                "    font-size: 9pt;"
+                "    selection-background-color: #B4D5FE;"
+                "}"
+            );
+        }
+
+        void HexDumpWidget::setRawData(const std::vector<uint8_t>& data)
+        {
+            raw_data_ = data;
+            buildHexDump();
+        }
+
+        void HexDumpWidget::clearData()
+        {
+            raw_data_.clear();
+            clear();
+            highlighted_offset_ = -1;
+            highlighted_length_ = 0;
+            hover_offset_ = -1;
+        }
+
+        void HexDumpWidget::buildHexDump()
+        {
+            if (raw_data_.empty()) {
+                clear();
+                return;
+            }
+
+            QString html;
+            html += "<pre style='margin: 0; padding: 5px; font-family: Consolas, monospace; font-size: 9pt;'>";
+            
+            // Header
+            html += "<span style='color: #0000FF; font-weight: bold;'>";
+            html += "Offset(h)  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F  ";
+            html += "Decoded text\n";
+            html += "</span>";
+            
+            // Data rows
+            for (size_t offset = 0; offset < raw_data_.size(); offset += BYTES_PER_LINE) {
+                // Offset
+                html += QString("<span style='color: #808080;'>%1  </span>")
+                    .arg(offset, 8, 16, QChar('0')).toUpper();
+                
+                // Hex bytes
+                size_t line_len = std::min(size_t(BYTES_PER_LINE), raw_data_.size() - offset);
+                for (size_t i = 0; i < BYTES_PER_LINE; i++) {
+                    if (i < line_len) {
+                        html += QString("<span id='byte_%1'>%2</span> ")
+                            .arg(offset + i)
+                            .arg(raw_data_[offset + i], 2, 16, QChar('0')).toUpper();
+                    } else {
+                        html += "   ";
+                    }
+                }
+                
+                html += " ";
+                
+                // ASCII representation
+                for (size_t i = 0; i < line_len; i++) {
+                    uint8_t byte = raw_data_[offset + i];
+                    QChar c = (byte >= 32 && byte <= 126) ? QChar(byte) : QChar('.');
+                    html += QString("<span id='ascii_%1'>%2</span>")
+                        .arg(offset + i)
+                        .arg(c);
+                }
+                
+                html += "\n";
+            }
+            
+            html += "</pre>";
+            
+            setHtml(html);
+        }
+
+        void HexDumpWidget::highlightBytes(int offset, int length)
+        {
+            if (offset < 0 || length <= 0 || raw_data_.empty()) {
+                clearHighlight();
+                return;
+            }
+
+            highlighted_offset_ = offset;
+            highlighted_length_ = length;
+            
+            // Rebuild with highlighting
+            QTextCursor cursor = textCursor();
+            cursor.movePosition(QTextCursor::Start);
+            
+            // Calculate position in text
+            // Format: "Offset(h)  00 01 02 03...\n" + data lines
+            int header_lines = 1;
+            int line_number = offset / BYTES_PER_LINE;
+            int byte_in_line = offset % BYTES_PER_LINE;
+            
+            // Move to correct line
+            for (int i = 0; i < header_lines + line_number; i++) {
+                cursor.movePosition(QTextCursor::Down);
+            }
+            
+            // Move to correct position in line
+            // Offset(8) + "  "(2) + (byte_pos * 3)
+            int char_pos = 10 + (byte_in_line * 3);
+            cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, char_pos);
+            
+            // Select bytes
+            int remaining = length;
+            while (remaining > 0 && cursor.position() < document()->characterCount()) {
+                cursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, 2);
+                remaining--;
+                
+                if (remaining > 0) {
+                    cursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, 1); // Space
+                }
+                
+                // Handle line wrap
+                if ((offset + length - remaining) % BYTES_PER_LINE == 0 && remaining > 0) {
+                    cursor.movePosition(QTextCursor::Down);
+                    cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, 10);
+                }
+            }
+            
+            // Apply format
+            cursor.mergeCharFormat(highlight_format_);
+            
+            // Scroll to visible
+            setTextCursor(cursor);
+            ensureCursorVisible();
+        }
+
+        void HexDumpWidget::clearHighlight()
+        {
+            highlighted_offset_ = -1;
+            highlighted_length_ = 0;
+            
+            // Reset all formatting
+            QTextCursor cursor = textCursor();
+            cursor.select(QTextCursor::Document);
+            cursor.setCharFormat(normal_format_);
+        }
+
+        void HexDumpWidget::mouseMoveEvent(QMouseEvent* event)
+        {
+            QTextEdit::mouseMoveEvent(event);
+            
+            int offset = getOffsetAtPosition(event->pos());
+            if (offset >= 0 && offset != hover_offset_) {
+                updateHoverHighlight(offset);
+                
+                // Show tooltip
+                QString tooltip = QString("Offset: 0x%1 (%2)\nValue: 0x%3 (%4)")
+                    .arg(offset, 4, 16, QChar('0'))
+                    .arg(offset)
+                    .arg(raw_data_[offset], 2, 16, QChar('0'))
+                    .arg(raw_data_[offset]);
+                QToolTip::showText(event->globalPosition().toPoint(), tooltip);
+                
+                emit bytesHovered(offset, 1);
+            }
+        }
+
+        void HexDumpWidget::leaveEvent(QEvent* event)
+        {
+            QTextEdit::leaveEvent(event);
+            hover_offset_ = -1;
+            QToolTip::hideText();
+        }
+
+        int HexDumpWidget::getOffsetAtPosition(const QPoint& pos)
+        {
+            QTextCursor cursor = cursorForPosition(pos);
+            int line = cursor.blockNumber();
+            
+            if (line <= 0) { // Header line
+                return -1;
+            }
+            
+            line--; // Adjust for header
+            
+            QString line_text = cursor.block().text();
+            int col = cursor.positionInBlock();
+            
+            // Check if in hex area (after offset)
+            if (col < 10) {
+                return -1;
+            }
+            
+            int hex_area_col = col - 10;
+            int byte_in_line = hex_area_col / 3;
+            
+            if (byte_in_line >= BYTES_PER_LINE) {
+                return -1;
+            }
+            
+            int offset = line * BYTES_PER_LINE + byte_in_line;
+            
+            if (offset >= static_cast<int>(raw_data_.size())) {
+                return -1;
+            }
+            
+            return offset;
+        }
+
+        void HexDumpWidget::updateHoverHighlight(int offset)
+        {
+            hover_offset_ = offset;
+            // Could implement hover highlighting here if needed
+        }
+
+        // ==================== PacketDetailWidget Implementation ====================
 
         PacketDetailWidget::PacketDetailWidget(QWidget* parent)
             : QWidget(parent)
+            , splitter_(nullptr)
             , tree_widget_(nullptr)
+            , hex_widget_(nullptr)
             , context_menu_(nullptr)
             , expand_menu_(nullptr)
             , filter_menu_(nullptr)
             , copy_menu_(nullptr)
             , export_menu_(nullptr)
             , current_packet_(nullptr)
-            , current_raw_data_(nullptr)
             , selected_item_(nullptr)
             , show_hex_data_(true)
             , auto_expand_(true)
@@ -37,7 +282,7 @@ namespace NetworkSecurity
         {
             setupUI();
             
-            spdlog::info("PacketDetailWidget initialized");
+            spdlog::info("PacketDetailWidget initialized with split view");
         }
 
         PacketDetailWidget::~PacketDetailWidget()
@@ -53,11 +298,30 @@ namespace NetworkSecurity
             layout->setContentsMargins(0, 0, 0, 0);
             layout->setSpacing(0);
 
+            setupSplitter();
             setupTreeWidget();
-            layout->addWidget(tree_widget_);
-
+            setupHexWidget();
             setupContextMenu();
             applyWiresharkStyle();
+            
+            layout->addWidget(splitter_);
+        }
+
+        void PacketDetailWidget::setupSplitter()
+        {
+            splitter_ = new QSplitter(Qt::Horizontal, this);
+            splitter_->setChildrenCollapsible(false);
+            splitter_->setHandleWidth(4);
+            
+            splitter_->setStyleSheet(
+                "QSplitter::handle {"
+                "    background-color: #D0D0D0;"
+                "    border: 1px solid #A0A0A0;"
+                "}"
+                "QSplitter::handle:hover {"
+                "    background-color: #B0B0B0;"
+                "}"
+            );
         }
 
         void PacketDetailWidget::setupTreeWidget()
@@ -87,7 +351,11 @@ namespace NetworkSecurity
             tree_widget_->header()->setStretchLastSection(true);
             tree_widget_->header()->setSectionResizeMode(0, QHeaderView::Interactive);
             tree_widget_->header()->setSectionResizeMode(1, QHeaderView::Stretch);
-            tree_widget_->setColumnWidth(0, 350);
+            tree_widget_->setColumnWidth(0, 300);
+
+            // Enable mouse tracking for hover
+            tree_widget_->setMouseTracking(true);
+            tree_widget_->viewport()->setMouseTracking(true);
 
             // Connections
             connect(tree_widget_, &QTreeWidget::itemClicked,
@@ -102,6 +370,23 @@ namespace NetworkSecurity
                     this, &PacketDetailWidget::onItemContextMenu);
             connect(tree_widget_, &QTreeWidget::itemSelectionChanged,
                     this, &PacketDetailWidget::onItemSelectionChanged);
+            connect(tree_widget_, &QTreeWidget::itemEntered,
+                    this, &PacketDetailWidget::onTreeItemHovered);
+            
+            splitter_->addWidget(tree_widget_);
+        }
+
+        void PacketDetailWidget::setupHexWidget()
+        {
+            hex_widget_ = new HexDumpWidget(this);
+            
+            connect(hex_widget_, &HexDumpWidget::bytesHovered,
+                    this, &PacketDetailWidget::onHexBytesHovered);
+            
+            splitter_->addWidget(hex_widget_);
+            
+            // Set initial sizes (60% tree, 40% hex)
+            splitter_->setSizes(QList<int>() << 600 << 400);
         }
 
         void PacketDetailWidget::applyWiresharkStyle()
@@ -138,22 +423,6 @@ namespace NetworkSecurity
                 "    background-color: #9CC7F7;"
                 "}"
                 
-                "QTreeWidget::branch {"
-                "    background-color: transparent;"
-                "}"
-                
-                "QTreeWidget::branch:has-children:!has-siblings:closed,"
-                "QTreeWidget::branch:closed:has-children:has-siblings {"
-                "    border: none;"
-                "    image: url(:/icons/branch-closed.png);"
-                "}"
-                
-                "QTreeWidget::branch:open:has-children:!has-siblings,"
-                "QTreeWidget::branch:open:has-children:has-siblings {"
-                "    border: none;"
-                "    image: url(:/icons/branch-open.png);"
-                "}"
-                
                 "QHeaderView::section {"
                 "    background-color: #ECECEC;"
                 "    color: #2C2C2C;"
@@ -163,54 +432,6 @@ namespace NetworkSecurity
                 "    border-bottom: 2px solid #A0A0A0;"
                 "    font-weight: 600;"
                 "    font-size: 9pt;"
-                "}"
-                
-                "QHeaderView::section:hover {"
-                "    background-color: #DCDCDC;"
-                "}"
-                
-                "QScrollBar:vertical {"
-                "    background-color: #F0F0F0;"
-                "    width: 14px;"
-                "    border: none;"
-                "}"
-                
-                "QScrollBar::handle:vertical {"
-                "    background-color: #C0C0C0;"
-                "    min-height: 30px;"
-                "    border-radius: 7px;"
-                "    margin: 2px;"
-                "}"
-                
-                "QScrollBar::handle:vertical:hover {"
-                "    background-color: #A0A0A0;"
-                "}"
-                
-                "QScrollBar::add-line:vertical,"
-                "QScrollBar::sub-line:vertical {"
-                "    height: 0px;"
-                "}"
-                
-                "QScrollBar:horizontal {"
-                "    background-color: #F0F0F0;"
-                "    height: 14px;"
-                "    border: none;"
-                "}"
-                
-                "QScrollBar::handle:horizontal {"
-                "    background-color: #C0C0C0;"
-                "    min-width: 30px;"
-                "    border-radius: 7px;"
-                "    margin: 2px;"
-                "}"
-                
-                "QScrollBar::handle:horizontal:hover {"
-                "    background-color: #A0A0A0;"
-                "}"
-                
-                "QScrollBar::add-line:horizontal,"
-                "QScrollBar::sub-line:horizontal {"
-                "    width: 0px;"
                 "}"
             );
         }
@@ -224,11 +445,11 @@ namespace NetworkSecurity
                                                  tr("Expand"));
             
             action_expand_all_ = expand_menu_->addAction(tr("Expand All"));
-            action_expand_all_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_E));
+            action_expand_all_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
             connect(action_expand_all_, &QAction::triggered, this, &PacketDetailWidget::onExpandAll);
             
             action_expand_subtree_ = expand_menu_->addAction(tr("Expand Subtree"));
-            action_expand_subtree_->setShortcut(QKeySequence(Qt::SHIFT + Qt::Key_E));
+            action_expand_subtree_->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_E));
             connect(action_expand_subtree_, &QAction::triggered, this, &PacketDetailWidget::onExpandSubtree);
             
             expand_menu_->addSeparator();
@@ -238,7 +459,7 @@ namespace NetworkSecurity
             connect(action_collapse_all_, &QAction::triggered, this, &PacketDetailWidget::onCollapseAll);
             
             action_collapse_subtree_ = expand_menu_->addAction(tr("Collapse Subtree"));
-            action_collapse_subtree_->setShortcut(QKeySequence(Qt::SHIFT + Qt::Key_C));
+            action_collapse_subtree_->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_C));
             connect(action_collapse_subtree_, &QAction::triggered, this, &PacketDetailWidget::onCollapseSubtree);
 
             context_menu_->addSeparator();
@@ -248,17 +469,10 @@ namespace NetworkSecurity
                                                  tr("Apply as Filter"));
             
             action_apply_filter_ = filter_menu_->addAction(tr("Selected"));
-            action_apply_filter_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_F));
             connect(action_apply_filter_, &QAction::triggered, this, &PacketDetailWidget::onApplyAsFilter);
             
             action_prepare_filter_ = filter_menu_->addAction(tr("Not Selected"));
-            action_prepare_filter_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_F));
             connect(action_prepare_filter_, &QAction::triggered, this, &PacketDetailWidget::onPrepareFilter);
-            
-            filter_menu_->addSeparator();
-            
-            action_apply_column_ = filter_menu_->addAction(tr("As Column"));
-            connect(action_apply_column_, &QAction::triggered, this, &PacketDetailWidget::onApplyAsColumn);
 
             context_menu_->addSeparator();
 
@@ -267,25 +481,20 @@ namespace NetworkSecurity
                                                tr("Copy"));
             
             action_copy_field_ = copy_menu_->addAction(tr("Field Name"));
-            action_copy_field_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_N));
             connect(action_copy_field_, &QAction::triggered, this, &PacketDetailWidget::onCopyField);
             
             action_copy_value_ = copy_menu_->addAction(tr("Value"));
-            action_copy_value_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_V));
             connect(action_copy_value_, &QAction::triggered, this, &PacketDetailWidget::onCopyValue);
             
             action_copy_both_ = copy_menu_->addAction(tr("Field and Value"));
-            action_copy_both_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_C));
             connect(action_copy_both_, &QAction::triggered, this, &PacketDetailWidget::onCopyBoth);
             
             copy_menu_->addSeparator();
             
-            action_copy_bytes_ = copy_menu_->addAction(tr("Bytes (Hex)"));
-            action_copy_bytes_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_H));
-            connect(action_copy_bytes_, &QAction::triggered, this, &PacketDetailWidget::onCopyBytesHex);
+            action_copy_bytes_hex_ = copy_menu_->addAction(tr("Bytes (Hex)"));
+            connect(action_copy_bytes_hex_, &QAction::triggered, this, &PacketDetailWidget::onCopyBytesHex);
             
             action_copy_bytes_text_ = copy_menu_->addAction(tr("Bytes (Text)"));
-            action_copy_bytes_text_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_T));
             connect(action_copy_bytes_text_, &QAction::triggered, this, &PacketDetailWidget::onCopyBytesText);
 
             context_menu_->addSeparator();
@@ -299,19 +508,6 @@ namespace NetworkSecurity
             
             action_export_packet_ = export_menu_->addAction(tr("Packet Details..."));
             connect(action_export_packet_, &QAction::triggered, this, &PacketDetailWidget::onExportPacket);
-
-            context_menu_->addSeparator();
-
-            // ==================== Follow/Show ====================
-            action_follow_stream_ = context_menu_->addAction(QIcon::fromTheme("go-jump"), 
-                                                            tr("Follow Stream"));
-            action_follow_stream_->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::SHIFT | Qt::Key_F));
-            connect(action_follow_stream_, &QAction::triggered, this, &PacketDetailWidget::onFollowStream);
-            
-            action_show_hex_ = context_menu_->addAction(QIcon::fromTheme("utilities-terminal"), 
-                                                       tr("Show in Hex Dump"));
-            action_show_hex_->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_D));
-            connect(action_show_hex_, &QAction::triggered, this, &PacketDetailWidget::onShowInHexDump);
         }
 
         // ==================== Display ====================
@@ -321,19 +517,21 @@ namespace NetworkSecurity
         {
             try {
                 tree_widget_->clear();
+                hex_widget_->clearData();
                 selected_item_ = nullptr;
                 
                 current_packet_ = &packet;
-                current_raw_data_ = &raw_data;
+                current_raw_data_ = raw_data;
 
+                // Build tree structure
                 buildPacketTree(packet, raw_data);
                 
-                spdlog::debug("Displayed packet details");
+                // Display hex dump
+                hex_widget_->setRawData(raw_data);
+                
+                spdlog::debug("Displayed packet details with hex dump");
             } catch (const std::exception& e) {
                 spdlog::error("displayPacket exception: {}", e.what());
-                clearDisplay();
-            } catch (...) {
-                spdlog::error("displayPacket unknown exception");
                 clearDisplay();
             }
         }
@@ -341,8 +539,9 @@ namespace NetworkSecurity
         void PacketDetailWidget::clearDisplay()
         {
             tree_widget_->clear();
+            hex_widget_->clearData();
             current_packet_ = nullptr;
-            current_raw_data_ = nullptr;
+            current_raw_data_.clear();
             selected_item_ = nullptr;
             
             spdlog::debug("Cleared packet details");
@@ -350,16 +549,136 @@ namespace NetworkSecurity
 
         void PacketDetailWidget::refresh()
         {
-            if (current_packet_ && current_raw_data_) {
-                displayPacket(*current_packet_, *current_raw_data_);
+            if (current_packet_ && !current_raw_data_.empty()) {
+                displayPacket(*current_packet_, current_raw_data_);
             }
         }
+
+        void PacketDetailWidget::setSplitterRatio(double ratio)
+        {
+            if (ratio < 0.0 || ratio > 1.0) {
+                return;
+            }
+            
+            int total_width = splitter_->width();
+            int left_width = static_cast<int>(total_width * ratio);
+            int right_width = total_width - left_width;
+            
+            splitter_->setSizes(QList<int>() << left_width << right_width);
+        }
+
+        // ==================== Slots ====================
+
+        void PacketDetailWidget::onItemClicked(QTreeWidgetItem* item, int column)
+        {
+            Q_UNUSED(column);
+            
+            selected_item_ = item;
+
+            int offset = item->data(0, Qt::UserRole).toInt();
+            int length = item->data(0, Qt::UserRole + 1).toInt();
+
+            if (offset >= 0 && length > 0) {
+                // Highlight in hex dump
+                hex_widget_->highlightBytes(offset, length);
+                emit bytesSelected(offset, length);
+            } else {
+                hex_widget_->clearHighlight();
+            }
+
+            emit fieldSelected(item->text(0), item->text(1));
+        }
+
+        void PacketDetailWidget::onTreeItemHovered(QTreeWidgetItem* item, int column)
+        {
+            Q_UNUSED(column);
+            
+            if (!item) {
+                return;
+            }
+
+            int offset = item->data(0, Qt::UserRole).toInt();
+            int length = item->data(0, Qt::UserRole + 1).toInt();
+
+            if (offset >= 0 && length > 0) {
+                // Could show temporary highlight on hover
+                // For now, just show tooltip
+                QString tooltip = QString("Offset: 0x%1, Length: %2 bytes")
+                    .arg(offset, 4, 16, QChar('0'))
+                    .arg(length);
+                item->setToolTip(0, tooltip);
+            }
+        }
+
+        void PacketDetailWidget::onHexBytesHovered(int offset, int length)
+        {
+            // Find corresponding tree item and highlight it
+            // This is the reverse direction: hex -> tree
+            Q_UNUSED(offset);
+            Q_UNUSED(length);
+            
+            // Could implement tree item highlighting based on hex hover
+            // For now, just emit signal
+        }
+
+        void PacketDetailWidget::onItemDoubleClicked(QTreeWidgetItem* item, int column)
+        {
+            Q_UNUSED(column);
+            
+            if (item->childCount() > 0) {
+                item->setExpanded(!item->isExpanded());
+            }
+        }
+
+        void PacketDetailWidget::onItemExpanded(QTreeWidgetItem* item)
+        {
+            emit protocolExpanded(item->text(0));
+        }
+
+        void PacketDetailWidget::onItemCollapsed(QTreeWidgetItem* item)
+        {
+            emit protocolCollapsed(item->text(0));
+        }
+
+        void PacketDetailWidget::onItemContextMenu(const QPoint& pos)
+        {
+            QTreeWidgetItem* item = tree_widget_->itemAt(pos);
+            
+            if (item) {
+                selected_item_ = item;
+                
+                bool has_children = (item->childCount() > 0);
+                action_expand_subtree_->setEnabled(has_children);
+                action_collapse_subtree_->setEnabled(has_children);
+                
+                bool has_bytes = (getSelectedLength() > 0);
+                action_copy_bytes_hex_->setEnabled(has_bytes);
+                action_copy_bytes_text_->setEnabled(has_bytes);
+                action_export_bytes_->setEnabled(has_bytes);
+                
+                context_menu_->exec(tree_widget_->viewport()->mapToGlobal(pos));
+            }
+        }
+
+        void PacketDetailWidget::onItemSelectionChanged()
+        {
+            QList<QTreeWidgetItem*> selected = tree_widget_->selectedItems();
+            
+            if (!selected.isEmpty()) {
+                selected_item_ = selected.first();
+            } else {
+                selected_item_ = nullptr;
+                hex_widget_->clearHighlight();
+            }
+        }
+
 
         // ==================== Build Packet Tree ====================
 
         void PacketDetailWidget::buildPacketTree(const Common::ParsedPacket& packet,
                                                 const std::vector<uint8_t>& raw_data)
         {
+            Q_UNUSED(raw_data);
             int offset = 0;
 
             // Frame information
@@ -510,9 +829,9 @@ namespace NetworkSecurity
             auto* vlan = createItem(summary, QString(), offset, 4);
             vlan->setIcon(0, QIcon::fromTheme("network-wired"));
 
-            uint16_t tci = (packet.ethernet.vlan_priority << 13) | 
-                          (packet.ethernet.vlan_cfi << 12) | 
-                          packet.ethernet.vlan_id;
+            // uint16_t tci = (packet.ethernet.vlan_priority << 13) | 
+            //               (packet.ethernet.vlan_cfi << 12) | 
+            //               packet.ethernet.vlan_id;
             
             addChildItem(vlan, "Priority", QString::number(packet.ethernet.vlan_priority));
             addChildItem(vlan, "CFI", QString::number(packet.ethernet.vlan_cfi));
@@ -889,6 +1208,7 @@ namespace NetworkSecurity
 
         QTreeWidgetItem* PacketDetailWidget::addApplicationInfo(const Common::ParsedPacket& packet, int offset)
         {
+            Q_UNUSED(offset);
             QString protocol_name;
             
             switch (packet.app_protocol) {
@@ -936,7 +1256,7 @@ namespace NetworkSecurity
 
         QTreeWidgetItem* PacketDetailWidget::addPayloadInfo(const Common::ParsedPacket& packet, int offset)
         {
-            if (!current_raw_data_ || packet.payload_length == 0) {
+            if (current_raw_data_.empty() || packet.payload_length == 0) {
                 return nullptr;
             }
 
@@ -947,8 +1267,8 @@ namespace NetworkSecurity
             payload->setIcon(0, QIcon::fromTheme("text-x-generic"));
 
             // Show hex dump if enabled
-            if (show_hex_data_ && offset + packet.payload_length <= current_raw_data_->size()) {
-                const uint8_t* data = current_raw_data_->data() + offset;
+            if (show_hex_data_ && offset + packet.payload_length <= current_raw_data_.size()) {
+                const uint8_t* data = current_raw_data_.data() + offset;
                 size_t show_bytes = std::min(packet.payload_length, size_t(256));
                 
                 QString hex_preview = formatBytesOneLine(data, show_bytes);
@@ -1341,7 +1661,7 @@ namespace NetworkSecurity
 
         QByteArray PacketDetailWidget::getSelectedBytes() const
         {
-            if (!selected_item_ || !current_raw_data_) {
+            if (!selected_item_ || current_raw_data_.empty()) {
                 return QByteArray();
             }
 
@@ -1349,13 +1669,14 @@ namespace NetworkSecurity
             int length = selected_item_->data(0, Qt::UserRole + 1).toInt();
 
             if (offset < 0 || length <= 0 || 
-                offset + length > static_cast<int>(current_raw_data_->size())) {
+                offset + length > static_cast<int>(current_raw_data_.size())) {
                 return QByteArray();
             }
 
-            return QByteArray(reinterpret_cast<const char*>(current_raw_data_->data() + offset), 
+            return QByteArray(reinterpret_cast<const char*>(current_raw_data_.data() + offset), 
                             length);
         }
+
 
         QString PacketDetailWidget::getSelectedField() const
         {
@@ -1479,78 +1800,6 @@ namespace NetworkSecurity
         bool PacketDetailWidget::isAutoExpand() const
         {
             return auto_expand_;
-        }
-
-        // ==================== Slots ====================
-
-        void PacketDetailWidget::onItemClicked(QTreeWidgetItem* item, int column)
-        {
-            Q_UNUSED(column);
-            
-            selected_item_ = item;
-
-            int offset = item->data(0, Qt::UserRole).toInt();
-            int length = item->data(0, Qt::UserRole + 1).toInt();
-
-            if (offset >= 0 && length > 0) {
-                emit bytesSelected(offset, length);
-            }
-
-            emit fieldSelected(item->text(0), item->text(1));
-        }
-
-        void PacketDetailWidget::onItemDoubleClicked(QTreeWidgetItem* item, int column)
-        {
-            Q_UNUSED(column);
-            
-            if (item->childCount() > 0) {
-                item->setExpanded(!item->isExpanded());
-            }
-        }
-
-        void PacketDetailWidget::onItemExpanded(QTreeWidgetItem* item)
-        {
-            emit protocolExpanded(item->text(0));
-        }
-
-        void PacketDetailWidget::onItemCollapsed(QTreeWidgetItem* item)
-        {
-            emit protocolCollapsed(item->text(0));
-        }
-
-        void PacketDetailWidget::onItemContextMenu(const QPoint& pos)
-        {
-            QTreeWidgetItem* item = tree_widget_->itemAt(pos);
-            
-            if (item) {
-                selected_item_ = item;
-                
-                // Update action states
-                bool has_children = (item->childCount() > 0);
-                action_expand_subtree_->setEnabled(has_children);
-                action_collapse_subtree_->setEnabled(has_children);
-                
-                bool has_bytes = (getSelectedLength() > 0);
-                action_copy_bytes_->setEnabled(has_bytes);
-                action_copy_bytes_hex_->setEnabled(has_bytes);
-                action_copy_bytes_text_->setEnabled(has_bytes);
-                action_export_bytes_->setEnabled(has_bytes);
-                action_show_hex_->setEnabled(has_bytes);
-                
-                // Show menu
-                context_menu_->exec(tree_widget_->viewport()->mapToGlobal(pos));
-            }
-        }
-
-        void PacketDetailWidget::onItemSelectionChanged()
-        {
-            QList<QTreeWidgetItem*> selected = tree_widget_->selectedItems();
-            
-            if (!selected.isEmpty()) {
-                selected_item_ = selected.first();
-            } else {
-                selected_item_ = nullptr;
-            }
         }
 
         // ==================== Context Menu Actions ====================

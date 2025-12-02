@@ -632,3 +632,125 @@
 [2025-11-28 20:42:21.591] [info] [35595] PacketListWidget destroyed
 [2025-11-28 20:42:21.592] [info] [35595] PacketTableModel destroyed with 73 packets
 [2025-11-28 20:42:21.594] [info] [35595] Capture dialog destroyed
+[2025-11-28 21:05:11.699] [info] [54767] ========================================
+[2025-11-28 21:05:11.699] [info] [54767]   Network Security Analyzer v1.0.0
+[2025-11-28 21:05:11.699] [info] [54767] ========================================
+[2025-11-28 21:05:11.699] [info] [54767] Logging initialized
+[2025-11-28 21:05:11.699] [info] [54767] Log level: info
+[2025-11-28 21:05:11.699] [info] [54767] Permission check passed
+[2025-11-28 21:05:11.699] [info] [54767] Using system theme
+[2025-11-28 21:05:11.699] [info] [54767] MainWindow constructor started
+[2025-11-28 21:05:11.707] [info] [54767] PacketTableModel initialized
+[2025-11-28 21:05:11.710] [info] [54767] Loaded 42 default color rules
+[2025-11-28 21:05:11.710] [info] [54767] Color rules set: 42 rules
+[2025-11-28 21:05:11.710] [info] [54767] Color rules initialized with 42 rules
+[2025-11-28 21:05:11.710] [info] [54767] Settings loaded
+[2025-11-28 21:05:11.710] [info] [54767] PacketListWidget initialized
+[2025-11-28 21:05:11.711] [info] [54767] PacketDetailWidget initialized
+[2025-11-28 21:05:11.714] [info] [54767] Settings loaded
+[2025-11-28 21:05:11.714] [info] [54767] MainWindow initialized successfully
+[2025-11-28 21:05:11.715] [info] [54767] Application started successfully
+[2025-11-28 21:05:14.603] [info] [54767] Loaded 14 network interfaces
+[2025-11-28 21:05:14.603] [info] [54767] Capture dialog created
+[2025-11-28 21:05:16.687] [info] [54767] Starting capture on interface: wlan0
+[2025-11-28 21:05:16.689] [info] [54767] PacketIngress created for interface: wlan0
+[2025-11-28 21:05:16.690] [info] [54767] Successfully created pcap handle for wlan0
+[2025-11-28 21:05:16.690] [info] [54767] Buffer size set to 2097152 bytes (2 MB)
+[2025-11-28 21:05:16.690] [info] [54767] Activating pcap handle for wlan0...
+[2025-11-28 21:05:16.716] [info] [54767] Successfully opened interface: wlan0
+[2025-11-28 21:05:16.716] [info] [54767] Datalink type: EN10MB (Ethernet)
+[2025-11-28 21:05:16.716] [info] [54767] PacketIngress initialized successfully for wlan0
+[2025-11-28 21:05:16.716] [info] [54767]   - Snaplen: 65535 bytes
+[2025-11-28 21:05:16.716] [info] [54767]   - Buffer: 2 MB
+[2025-11-28 21:05:16.716] [info] [54767]   - Promiscuous: enabled
+[2025-11-28 21:05:16.716] [info] [54767]   - Timeout: 1000 ms
+[2025-11-28 21:05:16.716] [info] [54767] ========================================
+[2025-11-28 21:05:16.716] [info] [54767] Packet capture STARTED
+[2025-11-28 21:05:16.716] [info] [54767] Interface: wlan0
+[2025-11-28 21:05:16.716] [info] [54767] Start time: 57879-09-02 06:58:36.567
+[2025-11-28 21:05:16.716] [info] [54767] ========================================
+[2025-11-28 21:05:16.717] [info] [54767] Started capture on interface: wlan0
+[2025-11-28 21:05:22.502] [info] [54767] Stopping packet capture on wlan0...
+[2025-11-28 21:05:22.502] [info] [54767] ========================================
+[2025-11-28 21:05:22.502] [info] [54767] Packet capture STOPPED
+[2025-11-28 21:05:22.502] [info] [54767] Interface: wlan0
+[2025-11-28 21:05:22.502] [info] [54767] End time: 57879-09-02 08:35:02.629
+[2025-11-28 21:05:22.502] [info] [54767] Duration: 5 seconds
+[2025-11-28 21:05:22.502] [info] [54767] ----------------------------------------
+[2025-11-28 21:05:22.502] [info] [54767] Statistics:
+[2025-11-28 21:05:22.502] [info] [54767]   - Packets received: 90
+[2025-11-28 21:05:22.502] [info] [54767]   - Packets dropped: 0
+[2025-11-28 21:05:22.502] [info] [54767]   - Bytes received: 22764 (0.02 MB)
+[2025-11-28 21:05:22.502] [info] [54767]   - Errors: 0
+[2025-11-28 21:05:22.502] [info] [54767]   - Average rate: 19.56 packets/sec
+[2025-11-28 21:05:22.502] [info] [54767] ========================================
+[2025-11-28 21:05:22.560] [info] [54767] PacketIngress destroyed for interface: wlan0
+[2025-11-28 21:05:22.561] [info] [54767] Stopped capture
+[2025-11-28 21:38:03.255] [info] [54767] Settings saved
+[2025-11-28 21:38:03.262] [info] [54767] Application exiting with code 0
+[2025-11-28 21:38:03.262] [info] [54767] ========================================
+[2025-11-28 21:38:03.262] [info] [54767] Settings saved
+[2025-11-28 21:38:03.264] [info] [54767] MainWindow destroyed
+[2025-11-28 21:38:03.268] [info] [54767] PacketDetailWidget destroyed
+[2025-11-28 21:38:03.272] [info] [54767] Settings saved
+[2025-11-28 21:38:03.272] [info] [54767] PacketListWidget destroyed
+[2025-11-28 21:38:03.273] [info] [54767] PacketTableModel destroyed with 90 packets
+[2025-11-28 21:38:03.276] [info] [54767] Capture dialog destroyed
+[2025-12-02 14:11:53.999] [info] [28959] ========================================
+[2025-12-02 14:11:53.999] [info] [28959]   Network Security Analyzer v1.0.0
+[2025-12-02 14:11:53.999] [info] [28959] ========================================
+[2025-12-02 14:11:53.999] [info] [28959] Logging initialized
+[2025-12-02 14:11:53.999] [info] [28959] Log level: info
+[2025-12-02 14:11:53.999] [info] [28959] Permission check passed
+[2025-12-02 14:11:53.999] [info] [28959] Using system theme
+[2025-12-02 14:11:54.000] [info] [28959] MainWindow constructor started
+[2025-12-02 14:11:54.023] [info] [28959] PacketTableModel initialized
+[2025-12-02 14:11:54.024] [info] [28959] Loaded 42 default color rules
+[2025-12-02 14:11:54.025] [info] [28959] Color rules set: 42 rules
+[2025-12-02 14:11:54.025] [info] [28959] Color rules initialized with 42 rules
+[2025-12-02 14:11:54.025] [info] [28959] Settings loaded
+[2025-12-02 14:11:54.025] [info] [28959] PacketListWidget initialized
+[2025-12-02 14:11:54.029] [info] [28959] PacketDetailWidget initialized with split view
+[2025-12-02 14:11:54.040] [info] [28959] Settings loaded
+[2025-12-02 14:11:54.040] [info] [28959] MainWindow initialized successfully
+[2025-12-02 14:11:54.042] [info] [28959] Application started successfully
+[2025-12-02 14:11:56.356] [info] [28959] Loaded 14 network interfaces
+[2025-12-02 14:11:56.357] [info] [28959] Capture dialog created
+[2025-12-02 14:11:57.696] [info] [28959] Starting capture on interface: wlan0
+[2025-12-02 14:11:57.696] [info] [28959] PacketIngress created for interface: wlan0
+[2025-12-02 14:11:57.697] [info] [28959] Successfully created pcap handle for wlan0
+[2025-12-02 14:11:57.697] [info] [28959] Buffer size set to 2097152 bytes (2 MB)
+[2025-12-02 14:11:57.697] [info] [28959] Activating pcap handle for wlan0...
+[2025-12-02 14:11:57.736] [info] [28959] Successfully opened interface: wlan0
+[2025-12-02 14:11:57.736] [info] [28959] Datalink type: EN10MB (Ethernet)
+[2025-12-02 14:11:57.736] [info] [28959] PacketIngress initialized successfully for wlan0
+[2025-12-02 14:11:57.736] [info] [28959]   - Snaplen: 65535 bytes
+[2025-12-02 14:11:57.736] [info] [28959]   - Buffer: 2 MB
+[2025-12-02 14:11:57.736] [info] [28959]   - Promiscuous: enabled
+[2025-12-02 14:11:57.736] [info] [28959]   - Timeout: 1000 ms
+[2025-12-02 14:11:57.736] [info] [28959] ========================================
+[2025-12-02 14:11:57.736] [info] [28959] Packet capture STARTED
+[2025-12-02 14:11:57.736] [info] [28959] Interface: wlan0
+[2025-12-02 14:11:57.736] [info] [28959] Start time: 57889-11-01 06:22:16.468
+[2025-12-02 14:11:57.736] [info] [28959] ========================================
+[2025-12-02 14:11:57.737] [info] [28959] Started capture on interface: wlan0
+[2025-12-02 14:14:24.123] [info] [28959] Stopping packet capture on wlan0...
+[2025-12-02 14:14:24.123] [info] [28959] ========================================
+[2025-12-02 14:14:24.123] [info] [28959] Packet capture STOPPED
+[2025-12-02 14:14:24.123] [info] [28959] Interface: wlan0
+[2025-12-02 14:14:24.123] [info] [28959] End time: 57889-11-02 23:02:03.397
+[2025-12-02 14:14:24.123] [info] [28959] Duration: 146 seconds
+[2025-12-02 14:14:24.123] [info] [28959] ----------------------------------------
+[2025-12-02 14:14:24.123] [info] [28959] Statistics:
+[2025-12-02 14:14:24.123] [info] [28959]   - Packets received: 310
+[2025-12-02 14:14:24.123] [info] [28959]   - Packets dropped: 0
+[2025-12-02 14:14:24.123] [info] [28959]   - Bytes received: 73380 (0.07 MB)
+[2025-12-02 14:14:24.123] [info] [28959]   - Errors: 0
+[2025-12-02 14:14:24.123] [info] [28959]   - Average rate: 2.15 packets/sec
+[2025-12-02 14:14:24.123] [info] [28959] ========================================
+[2025-12-02 14:14:24.167] [info] [28959] PacketIngress destroyed for interface: wlan0
+[2025-12-02 14:14:24.168] [info] [28959] Stopped capture
+[2025-12-02 14:14:24.169] [info] [28959] Settings saved
+[2025-12-02 14:14:24.176] [info] [28959] Application exiting with code 0
+[2025-12-02 14:14:24.176] [info] [28959] ========================================
+[2025-12-02 14:14:24.176] [i
